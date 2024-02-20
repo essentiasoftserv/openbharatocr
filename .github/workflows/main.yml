@@ -1,0 +1,47 @@
+name: Bharat OCR
+
+
+on:
+    workflow_call:
+    workflow_dispatch:
+    push:
+      branches: [main, dev, release, staging]
+    pull_request:
+      branches: [main, dev, release, staging]
+
+jobs:
+  spell_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install codespell
+        run: |
+          pip install codespell
+          codespell #--skip=".git,./scripts/lambda/packages" 
+        continue-on-error: false
+    
+  black_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install black
+        run: |
+          pip install black
+          black . --check
+        continue-on-error: false
+  
+  password_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out HEAD
+        uses: actions/checkout@v2
+        with:
+            fetch-depth: 1
+      - name: Check for  password
+        uses: AlicanAkkus/pinder-action@0.1

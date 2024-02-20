@@ -17,7 +17,7 @@ setuptools.setup(
     description="bharatocr is an opensource python library for ocr Indian government documents ",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="hhttps://github.com/essentiasoftserv/bharatocr.git",
+    url="https://github.com/essentiasoftserv/bharatocr.git",
     author="essentiasoftserv",
     python_requires=">=3.6",
     install_requires=install_requires,

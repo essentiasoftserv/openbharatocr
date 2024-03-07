@@ -75,4 +75,10 @@ def extract_pan_details(image_path):
 
 
 image_path = "test_image2.jpg"
-pan_details = extract_pan_details(image_path)
+
+
+def pan(image_path):
+    return extract_pan_details(image_path)
+
+
+# pan_details = extract_pan_details(image_path)

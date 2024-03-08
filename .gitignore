@@ -13,3 +13,4 @@ sample
 SynthImageDataset
 Test_data
 Val_data
+__pycache__

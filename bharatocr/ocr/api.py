@@ -1,1 +1,1 @@
-from ocr.pan import pan
+from bharatocr.ocr.pan import pan

@@ -115,7 +115,26 @@ def extract_address(image_path):
     return address
 
 
-def extract_aadhaar_details(image_path):
+def extract_back_aadhaar_details(image_path):
+
+    image = Image.open(image_path)
+
+    extracted_text = pytesseract.image_to_string(image)
+
+    # hindi_text = pytesseract.image_to_string(image, lang='hin')
+    # print(hindi_text)
+    # print(extracted_text)
+
+    fathers_name = extract_fathers_name(extracted_text)
+    address = extract_address(image_path)
+
+    return {
+        "Father's Name": fathers_name,
+        "Address": address,
+    }
+
+
+def extract_front_aadhaar_details(image_path):
 
     image = Image.open(image_path)
 
@@ -126,24 +145,24 @@ def extract_aadhaar_details(image_path):
     # print(extracted_text)
 
     full_name = extract_name(extracted_text)
-    fathers_name = extract_fathers_name(extracted_text)
     dob = extract_dob(extracted_text)
     gender = extract_gender(extracted_text)
     aadhaar_number = extract_aadhaar(extracted_text)
-    address = extract_address(image_path)
 
     if dob == "":
         dob = extract_yob(extracted_text)
 
     return {
         "Full Name": full_name,
-        "Father's Name": fathers_name,
         "Date/Year of Birth": dob,
         "Gender": gender,
         "Aadhaar Number": aadhaar_number,
-        "Address": address,
     }
 
 
-def aadhaar(image_path):
-    return extract_aadhaar_details(image_path)
+def front_aadhaar(image_path):
+    return extract_front_aadhaar_details(image_path)
+
+
+def back_aadhaar(image_path):
+    return extract_back_aadhaar_details(image_path)

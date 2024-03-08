@@ -12,12 +12,12 @@ with open("requirements.txt", "r") as fp:
     install_requires = fp.read()
 
 setuptools.setup(
-    name="bharatocr",
+    name="openbharatocr",
     version="0.0.1",
     description="bharatocr is an opensource python library for ocr Indian government documents ",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/essentiasoftserv/obharatocr.git",
+    url="https://github.com/essentiasoftserv/openbharatocr.git",
     author="essentiasoftserv",
     python_requires=">=3.6",
     install_requires=install_requires,

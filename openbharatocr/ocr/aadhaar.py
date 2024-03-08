@@ -107,10 +107,10 @@ def extract_address(image_path):
     roi = gray_image[top:h, left:w]
     address = pytesseract.image_to_string(roi, config=config)
 
-    splitted = address.split(" ")
-    splitted.remove(splitted[0])
+    split_add = address.split(" ")
+    split_add.remove(split_add[0])
 
-    address = " ".join(splitted)
+    address = " ".join(split_add)
     # print(address)
     return address
 

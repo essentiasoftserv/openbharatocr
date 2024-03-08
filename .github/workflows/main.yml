@@ -1,13 +1,12 @@
 name: Bharat OCR
 
-
 on:
-    workflow_call:
-    workflow_dispatch:
-    push:
-      branches: [main, dev, release, staging]
-    pull_request:
-      branches: [main, dev, release, staging]
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches: [main, dev, release, staging]
+  pull_request:
+    branches: [main, dev, release, staging]
 
 jobs:
   spell_check:
@@ -20,9 +19,9 @@ jobs:
       - name: Install codespell
         run: |
           pip install codespell
-          codespell #--skip=".git,./scripts/lambda/packages" 
+          codespell #--skip=".git,./scripts/lambda/packages"
         continue-on-error: false
-    
+
   black_check:
     runs-on: ubuntu-latest
     steps:
@@ -35,13 +34,28 @@ jobs:
           pip install black
           black . --check
         continue-on-error: false
-  
+
   password_check:
     runs-on: ubuntu-latest
     steps:
       - name: Check out HEAD
         uses: actions/checkout@v2
         with:
-            fetch-depth: 1
+          fetch-depth: 1
       - name: Check for  password
         uses: AlicanAkkus/pinder-action@0.1
+
+  publish_to_pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      - name: Build package
+        run: python -m build
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

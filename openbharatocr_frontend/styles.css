@@ -9,7 +9,7 @@ body {
 
 }
 
-/* comman styles */
+/* common styles */
 
 .text-center {
     text-align: center
@@ -142,7 +142,7 @@ li a:hover {
     border-radius: 50px;
 }
 
-/* Media query */
+/* media query */
 
 @media only screen and (max-width: 700px) {
     .footer .footer-container {

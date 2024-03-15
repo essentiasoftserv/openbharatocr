@@ -3,6 +3,8 @@ import cv2
 import pytesseract
 from PIL import Image
 from datetime import datetime
+import tempfile
+import uuid
 
 
 def extract_name(input):
@@ -73,46 +75,49 @@ def extract_address(image_path):
 
     if "Address" not in text:
         return ""
+    rgb = image.convert("RGB")
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
+        rgb.save(tempfile_path)
+        image = cv2.imread(tempfile_path)
 
-    image = cv2.imread(image_path)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        config = r"--oem 3 --psm 6"
+        boxes_data = pytesseract.image_to_data(gray_image, config=config)
 
-    config = r"--oem 3 --psm 6"
-    boxes_data = pytesseract.image_to_data(gray_image, config=config)
+        boxes = boxes_data.splitlines()
+        boxes = [b.split() for b in boxes]
 
-    boxes = boxes_data.splitlines()
-    boxes = [b.split() for b in boxes]
+        # print(boxes)
 
-    # print(boxes)
+        left, top = 0, 0
+        for box in boxes[1:]:
+            if len(box) == 12:
+                if "Address" in box[11]:
+                    left = int(box[6])
+                    top = int(box[7])
 
-    left, top = 0, 0
-    for box in boxes[1:]:
-        if len(box) == 12:
-            if "Address" in box[11]:
-                left = int(box[6])
-                top = int(box[7])
+        # print(left, top)
 
-    # print(left, top)
+        h, w = gray_image.shape
+        # print(left, h, w)
+        """
+        If 'Address' is present in the left half of the image, then we restrict ROI.
+        """
+        if left < int(0.4 * w):
+            h = int(0.9 * h)
+            w = int(0.6 * w)
 
-    h, w = gray_image.shape
-    # print(left, h, w)
-    """
-    If 'Address' is present in the left half of the image, then we restrict ROI.
-    """
-    if left < int(0.4 * w):
-        h = int(0.9 * h)
-        w = int(0.6 * w)
+        roi = gray_image[top:h, left:w]
+        address = pytesseract.image_to_string(roi, config=config)
 
-    roi = gray_image[top:h, left:w]
-    address = pytesseract.image_to_string(roi, config=config)
+        split_add = address.split(" ")
+        split_add.remove(split_add[0])
 
-    split_add = address.split(" ")
-    split_add.remove(split_add[0])
-
-    address = " ".join(split_add)
-    # print(address)
-    return address
+        address = " ".join(split_add)
+        # print(address)
+        return address
 
 
 def extract_back_aadhaar_details(image_path):

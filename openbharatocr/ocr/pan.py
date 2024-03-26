@@ -1,7 +1,6 @@
 import re
 import pytesseract
 from PIL import Image
-from datetime import datetime
 
 
 def extract_names(input):
@@ -47,8 +46,15 @@ def extract_pan(input):
 
 
 def extract_dob(input):
+    """
+    # This regex pattern matches dates in dd/mm/yyyy, 
+    dd-mm-yyyy, dd.mm.yyyy, and dd/mm/yy formats.
+    # It accommodates dates separated by slashes (/),
+    hyphens (-), or dots (.), and years in both four-digit 
+    and two-digit formats.
+    """
 
-    regex = r"\b(\d{2}/\d{2}/\d{4})\b"
+    regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
     match = re.search(regex, input)
     dob = match.group(0) if match else ""
 
@@ -82,3 +88,4 @@ def pan(image_path):
 
 
 # pan_details = extract_pan_details(image_path)
+

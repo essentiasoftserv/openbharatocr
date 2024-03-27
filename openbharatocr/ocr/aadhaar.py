@@ -153,4 +153,3 @@ def front_aadhaar(image_path):
 
 def back_aadhaar(image_path):
     return extract_back_aadhaar_details(image_path)
-

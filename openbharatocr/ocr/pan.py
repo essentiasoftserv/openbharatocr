@@ -27,7 +27,7 @@ def extract_names(input):
                     name = match.group().strip()
                     names.append(name)
 
-        # print(names)
+
         if len(names) >= 1:
             full_name = names[0]
         if len(names) >= 2:
@@ -66,7 +66,6 @@ def extract_pan_details(image_path):
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)
-    # print(extracted_text)
 
     full_name, fathers_name = extract_names(extracted_text)
     dob = extract_dob(extracted_text)
@@ -80,11 +79,5 @@ def extract_pan_details(image_path):
     }
 
 
-image_path = "test_image2.jpg"
-
-
 def pan(image_path):
     return extract_pan_details(image_path)
-
-
-# pan_details = extract_pan_details(image_path)

@@ -35,6 +35,15 @@ In this function, Aadhaar Card front and back image will pass as path in the fun
     dict_output = openbharatocr.back_aadhaar(image_path)
 ```
 
+**Driving Licence**
+
+In this function, Driving Licence image will pass as path in the function and the output will be in dict.
+
+```
+    import openbharatocr 
+    dict_output = openbharatocr.driving_licence(image_path)
+```
+
 ### Contribute & support
 We are so pleased to your help and help you, If you wanna develop openbharatocr, Congrats or if you have problem, don't worry create an issue here:
 

@@ -27,7 +27,6 @@ def extract_names(input):
                     name = match.group().strip()
                     names.append(name)
 
-
         if len(names) >= 1:
             full_name = names[0]
         if len(names) >= 2:

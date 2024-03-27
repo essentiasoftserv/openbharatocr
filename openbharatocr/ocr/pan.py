@@ -29,7 +29,8 @@ def extract_all_names(input):
         "OF",
         "TAX",
         "GOVT",
-        "DEPARTMENT"
+        "DEPARTMENT",
+        "INCOME"
     ]
 
     names = [

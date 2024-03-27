@@ -4,6 +4,8 @@ import pytesseract
 from PIL import Image
 from datetime import datetime
 from dateutil.parser import parse
+import tempfile
+import uuid
 
 
 def extract_driving_licence_number(input):
@@ -145,41 +147,45 @@ def extract_address(image_path):
 
     if "Add" not in text and "ADD" not in text:
         return ""
+    rgb = image.convert("RGB")
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
+        rgb.save(tempfile_path)
 
-    image = cv2.imread(image_path)
+        image = cv2.imread(image_path)
 
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    config = r"--oem 3 --psm 6"
-    boxes_data = pytesseract.image_to_data(gray_image, config=config)
+        config = r"--oem 3 --psm 6"
+        boxes_data = pytesseract.image_to_data(gray_image, config=config)
 
-    boxes = boxes_data.splitlines()
-    boxes = [b.split() for b in boxes]
+        boxes = boxes_data.splitlines()
+        boxes = [b.split() for b in boxes]
 
-    left, top = -1, -1
-    for box in boxes[1:]:
-        if len(box) == 12:
-            if "Add" in box[11] or "ADD" in box[11]:
-                left = int(box[6])
-                top = int(box[7])
+        left, top = -1, -1
+        for box in boxes[1:]:
+            if len(box) == 12:
+                if "Add" in box[11] or "ADD" in box[11]:
+                    left = int(box[6])
+                    top = int(box[7])
 
-    if left == -1:
-        return extract_address_regex(text)
+        if left == -1:
+            return extract_address_regex(text)
 
-    h, w = gray_image.shape
+        h, w = gray_image.shape
 
-    right = min(left + int(0.4 * w), w)
-    bottom = min(top + int(0.18 * h), h)
+        right = min(left + int(0.4 * w), w)
+        bottom = min(top + int(0.18 * h), h)
 
-    roi = gray_image[top:bottom, left:right]
-    address = pytesseract.image_to_string(roi, config=config)
+        roi = gray_image[top:bottom, left:right]
+        address = pytesseract.image_to_string(roi, config=config)
 
-    split_address = address.split(" ")
-    split_address.remove(split_address[0])
+        split_address = address.split(" ")
+        split_address.remove(split_address[0])
 
-    address = " ".join(split_address)
+        address = " ".join(split_address)
 
-    return address
+        return address
 
 
 def extract_auth_allowed(input):

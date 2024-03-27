@@ -47,10 +47,10 @@ def extract_pan(input):
 
 def extract_dob(input):
     """
-    # This regex pattern matches dates in dd/mm/yyyy, 
+    # This regex pattern matches dates in dd/mm/yyyy,
     dd-mm-yyyy, dd.mm.yyyy, and dd/mm/yy formats.
     # It accommodates dates separated by slashes (/),
-    hyphens (-), or dots (.), and years in both four-digit 
+    hyphens (-), or dots (.), and years in both four-digit
     and two-digit formats.
     """
 
@@ -88,4 +88,3 @@ def pan(image_path):
 
 
 # pan_details = extract_pan_details(image_path)
-

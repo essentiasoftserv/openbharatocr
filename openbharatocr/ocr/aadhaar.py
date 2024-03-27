@@ -2,7 +2,6 @@ import re
 import cv2
 import pytesseract
 from PIL import Image
-from datetime import datetime
 import tempfile
 import uuid
 
@@ -11,7 +10,6 @@ def extract_name(input):
 
     name_regex = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
     names = re.findall(name_regex, input)
-    # print(names)
     full_name = ""
     for name in names:
         if "Government" not in name and "India" not in name:
@@ -89,8 +87,6 @@ def extract_address(image_path):
         boxes = boxes_data.splitlines()
         boxes = [b.split() for b in boxes]
 
-        # print(boxes)
-
         left, top = 0, 0
         for box in boxes[1:]:
             if len(box) == 12:
@@ -98,13 +94,8 @@ def extract_address(image_path):
                     left = int(box[6])
                     top = int(box[7])
 
-        # print(left, top)
-
         h, w = gray_image.shape
-        # print(left, h, w)
-        """
-        If 'Address' is present in the left half of the image, then we restrict ROI.
-        """
+
         if left < int(0.4 * w):
             h = int(0.9 * h)
             w = int(0.6 * w)
@@ -116,7 +107,6 @@ def extract_address(image_path):
         split_add.remove(split_add[0])
 
         address = " ".join(split_add)
-        # print(address)
         return address
 
 
@@ -125,10 +115,6 @@ def extract_back_aadhaar_details(image_path):
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)
-
-    # hindi_text = pytesseract.image_to_string(image, lang='hin')
-    # print(hindi_text)
-    # print(extracted_text)
 
     fathers_name = extract_fathers_name(extracted_text)
     address = extract_address(image_path)
@@ -144,10 +130,6 @@ def extract_front_aadhaar_details(image_path):
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)
-
-    # hindi_text = pytesseract.image_to_string(image, lang='hin')
-    # print(hindi_text)
-    # print(extracted_text)
 
     full_name = extract_name(extracted_text)
     dob = extract_dob(extracted_text)
@@ -171,3 +153,4 @@ def front_aadhaar(image_path):
 
 def back_aadhaar(image_path):
     return extract_back_aadhaar_details(image_path)
+

@@ -1,38 +1,38 @@
 import re
 import pytesseract
+import imghdr
 from PIL import Image
 
 
-def extract_names(input):
+def clean_input(match):
 
-    full_name, fathers_name = "", ""
+    cleaned = []
 
-    if "Name" in input:
-        name_regex = r"Name[\s:]+([A-Za-z\s]+)(?:\n|$)"
-        fathers_name_regex = r"Father's\s*Name.*?\n([^0-9\n]+)"
+    for name in match:
+        split_name = name.split("\n")
+        for chunk in split_name:
+            cleaned.append(chunk)
 
-        name_match = re.search(name_regex, input, re.IGNORECASE)
-        fathers_name_match = re.search(fathers_name_regex, input, re.IGNORECASE)
+    return cleaned
 
-        full_name = name_match.group(1).strip() if name_match else ""
-        fathers_name = fathers_name_match.group(1).strip() if fathers_name_match else ""
-    else:
-        names = []
-        lines = input.split("\n")
 
-        for line in lines:
-            if "INCOME TAX DEPARTMENT" not in line:
-                match = re.search(r"^[A-Z\s]+$", line)
-                if match:
-                    name = match.group().strip()
-                    names.append(name)
+def extract_all_names(input):
 
-        if len(names) >= 1:
-            full_name = names[0]
-        if len(names) >= 2:
-            fathers_name = names[1]
+    regex = r"\n[A-Z\s]+\b"
+    match = re.findall(regex, input)
 
-    return full_name, fathers_name
+    names = []
+    cleaned = clean_input(match)
+
+    stopwords = ["INDIA", "OF", "TAX", "GOVT", "DEPARTMENT", "INCOME"]
+
+    names = [
+        name.strip()
+        for name in cleaned
+        if not any(word in name for word in stopwords) and len(name.strip()) > 3
+    ]
+
+    return names
 
 
 def extract_pan(input):
@@ -63,16 +63,26 @@ def extract_dob(input):
 def extract_pan_details(image_path):
 
     image = Image.open(image_path)
-
     extracted_text = pytesseract.image_to_string(image)
 
-    full_name, fathers_name = extract_names(extracted_text)
+    format = imghdr.what(image_path)
+    if format != "jpeg":
+        image.save("image.jpg", "JPEG")
+
+        converted_image = Image.open("image.jpg")
+        converted_image_text = pytesseract.image_to_string(converted_image)
+
+        extracted_text += converted_image_text
+
+    names = extract_all_names(extracted_text)
+    full_name = names[0] if len(names) > 0 else ""
+    parents_name = names[1] if len(names) > 1 else ""
     dob = extract_dob(extracted_text)
     pan_number = extract_pan(extracted_text)
 
     return {
         "Full Name": full_name,
-        "Father's Name": fathers_name,
+        "Parent's Name": parents_name,
         "Date of Birth": dob,
         "PAN Number": pan_number,
     }

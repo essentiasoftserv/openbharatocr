@@ -83,13 +83,13 @@ def extract_pan_details(image_path):
 
     names = extract_all_names(extracted_text)
     full_name = names[0] if len(names) > 0 else ""
-    fathers_name =  names[1] if len(names) > 1 else ""
+    parents_name =  names[1] if len(names) > 1 else ""
     dob = extract_dob(extracted_text)
     pan_number = extract_pan(extracted_text)
 
     return {
         "Full Name": full_name,
-        "Father's/Mother's Name": fathers_name,
+        "Parent's Name": parents_name,
         "Date of Birth": dob,
         "PAN Number": pan_number,
     }

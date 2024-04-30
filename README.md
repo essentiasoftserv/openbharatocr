@@ -53,6 +53,24 @@ This function takes the path of a Passport image as input and returns its inform
     dict_output = openbharatocr.passport(image_path)
 ```
 
+**VoterID**
+
+The two functions accepts the file paths of the front and back images of a voterID as input and returns their corresponding information encapsulated in a dictionary.
+
+```
+    import openbharatocr 
+    # Download YOLOv3 models from links(added below) and set the path of YOLO_CFG, YOLO_WEIGHT
+    dict_output = openbharatocr.voter_id_front(image_path)
+    dict_output = openbharatocr.voter_id_back(image_path)
+```
+
+
+### Download Resources
+Some Resources need to download and set the path in the variables.
+- YOLO_CFG = https://drive.google.com/file/d/1SEst2lVoFDOgUVLZ5kje9GTb2tHRA8U-/view?usp=sharing
+- YOLO_WEIGHT = https://drive.google.com/file/d/1cGGstycfogmO6O7ToB2DAEXOgTWVgINh/view?usp=drive_link
+
+
 ### Contribute & support
 We are so pleased to your help and help you. If you wanna develop openbharatocr, Congrats! If you have problem, don't worry, create an issue here:
 

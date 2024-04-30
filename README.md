@@ -59,7 +59,7 @@ The two functions accepts the file paths of the front and back images of a voter
 
 ```
     import openbharatocr 
-    # Download YOLOv3 models from links(added below) and set the path of YOLO_CFG, YOLO_WEIGHT
+    # Download YOLOv3 models from links(added below) and set local downloaded path to YOLO_CFG, YOLO_WEIGHT env variables
     dict_output = openbharatocr.voter_id_front(image_path)
     dict_output = openbharatocr.voter_id_back(image_path)
 ```

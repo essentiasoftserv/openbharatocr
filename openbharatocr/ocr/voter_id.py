@@ -3,10 +3,15 @@ import cv2
 import pytesseract
 from PIL import Image
 import numpy as np
+import os
 
-# Download the models from links and set the path
-YOLO_CFG = "yolov3_custom.cfg"  # https://drive.google.com/file/d/1SEst2lVoFDOgUVLZ5kje9GTb2tHRA8U-/view?usp=sharing
-YOLO_WEIGHT = "yolov3_custom_6000.weights"  # https://drive.google.com/file/d/1cGGstycfogmO6O7ToB2DAEXOgTWVgINh/view?usp=drive_link
+# Download the models from links and set in the environment
+YOLO_CFG = os.environ.get(
+    "YOLO_CFG", "yolov3_custom.cfg"
+)  # https://drive.google.com/file/d/1SEst2lVoFDOgUVLZ5kje9GTb2tHRA8U-/view?usp=sharing
+YOLO_WEIGHT = os.environ.get(
+    "YOLO_WEIGHT", "yolov3_custom_6000.weights"
+)  # https://drive.google.com/file/d/1cGGstycfogmO6O7ToB2DAEXOgTWVgINh/view?usp=drive_link
 
 
 def preprocess_for_bold_text(image):

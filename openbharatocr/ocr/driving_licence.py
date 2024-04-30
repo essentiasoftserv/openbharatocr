@@ -141,7 +141,6 @@ def extract_address_regex(input):
 
 
 def extract_address(image_path):
-
     image = Image.open(image_path)
     text = pytesseract.image_to_string(image)
 
@@ -152,7 +151,7 @@ def extract_address(image_path):
         tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
         rgb.save(tempfile_path)
 
-        image = cv2.imread(image_path)
+        image = cv2.imread(tempfile_path)
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 

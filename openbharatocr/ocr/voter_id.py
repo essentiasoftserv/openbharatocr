@@ -4,6 +4,8 @@ import pytesseract
 from PIL import Image
 import numpy as np
 import os
+import tempfile
+import uuid
 
 # Download the models from links and set in the environment
 YOLO_CFG = os.environ.get(
@@ -31,66 +33,71 @@ def preprocess_for_bold_text(image):
 
 
 def extract_voter_details_yolo(image_path):
-
+    image = Image.open(image_path)
     net = cv2.dnn.readNetFromDarknet(YOLO_CFG, YOLO_WEIGHT)
     classes = ["elector", "relation", "voterid"]
 
-    img = cv2.imread(image_path)
-    if img is None:
-        print("Error: Unable to read the input image.")
-        exit()
+    rgb = image.convert("RGB")
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
+        rgb.save(tempfile_path)
 
-    height, width, _ = img.shape
-    blob = cv2.dnn.blobFromImage(
-        img, 1 / 255, (416, 416), (0, 0, 0), swapRB=True, crop=False
-    )
+        img = cv2.imread(tempfile_path)
+        if img is None:
+            print("Error: Unable to read the input image.")
+            exit()
 
-    net.setInput(blob)
-    output_layers_name = net.getUnconnectedOutLayersNames()
-    layerOutputs = net.forward(output_layers_name)
+        height, width, _ = img.shape
+        blob = cv2.dnn.blobFromImage(
+            img, 1 / 255, (416, 416), (0, 0, 0), swapRB=True, crop=False
+        )
 
-    boxes = []
-    confidences = []
-    class_ids = []
-    detected_texts = {}
+        net.setInput(blob)
+        output_layers_name = net.getUnconnectedOutLayersNames()
+        layerOutputs = net.forward(output_layers_name)
 
-    for output in layerOutputs:
-        for detection in output:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            if confidence > 0.5:
-                center_x = int(detection[0] * width)
-                center_y = int(detection[1] * height)
-                w = int(detection[2] * width)
-                h = int(detection[3] * height)
+        boxes = []
+        confidences = []
+        class_ids = []
+        detected_texts = {}
 
-                x = int(center_x - w / 2)
-                y = int(center_y - h / 2)
+        for output in layerOutputs:
+            for detection in output:
+                scores = detection[5:]
+                class_id = np.argmax(scores)
+                confidence = scores[class_id]
+                if confidence > 0.5:
+                    center_x = int(detection[0] * width)
+                    center_y = int(detection[1] * height)
+                    w = int(detection[2] * width)
+                    h = int(detection[3] * height)
 
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-                class_ids.append(class_id)
+                    x = int(center_x - w / 2)
+                    y = int(center_y - h / 2)
 
-    indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+                    boxes.append([x, y, w, h])
+                    confidences.append(float(confidence))
+                    class_ids.append(class_id)
 
-    for i in range(len(boxes)):
-        if i in indexes:
-            x, y, w, h = boxes[i]
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
-            x = max(0, x)
-            y = max(0, y)
-            w = min(width - x, w)
-            h = min(height - y, h)
+        for i in range(len(boxes)):
+            if i in indexes:
+                x, y, w, h = boxes[i]
 
-            label = str(classes[class_ids[i]])
-            crop_img = img[y : y + h, x : x + w]
-            if crop_img.size == 0:
-                continue
-            text = pytesseract.image_to_string(crop_img, config="--psm 6")
-            detected_texts[label] = text.strip()
+                x = max(0, x)
+                y = max(0, y)
+                w = min(width - x, w)
+                h = min(height - y, h)
 
-    return detected_texts
+                label = str(classes[class_ids[i]])
+                crop_img = img[y : y + h, x : x + w]
+                if crop_img.size == 0:
+                    continue
+                text = pytesseract.image_to_string(crop_img, config="--psm 6")
+                detected_texts[label] = text.strip()
+
+        return detected_texts
 
 
 def extract_voter_id(input):
@@ -169,35 +176,39 @@ def extract_voterid_details_front(image_path):
     gender = extract_gender(extracted_text)
 
     dob = extract_date(extracted_text)
+    rgb = image.convert("RGB")
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
+        rgb.save(tempfile_path)
 
-    image = cv2.imread(image_path)
-    preprocessed = preprocess_for_bold_text(image)
-    cv2.imwrite("preprocessed_image.jpg", preprocessed)
+        image = cv2.imread(tempfile_path)
+        preprocessed = preprocess_for_bold_text(image)
+        cv2.imwrite("preprocessed_image.jpg", preprocessed)
 
-    image = Image.open("preprocessed_image.jpg")
-    clean_text = pytesseract.image_to_string(image)
+        image = Image.open("preprocessed_image.jpg")
+        clean_text = pytesseract.image_to_string(image)
 
-    if electors_name == "":
-        names = extract_lines_with_uppercase_words(clean_text)
-        electors_name = names[-2] if len(names) > 1 else ""
-        fathers_name = names[-1] if len(names) > 0 else ""
+        if electors_name == "":
+            names = extract_lines_with_uppercase_words(clean_text)
+            electors_name = names[-2] if len(names) > 1 else ""
+            fathers_name = names[-1] if len(names) > 0 else ""
 
-    if dob == "":
-        dob = extract_date(clean_text)
+        if dob == "":
+            dob = extract_date(clean_text)
 
-    if voter_id == "":
-        voter_id = extract_voter_id(clean_text)
+        if voter_id == "":
+            voter_id = extract_voter_id(clean_text)
 
-    if gender == "":
-        gender = extract_gender(clean_text)
+        if gender == "":
+            gender = extract_gender(clean_text)
 
-    return {
-        "Voter ID": voter_id,
-        "Elector's Name": electors_name,
-        "Father's Name": fathers_name,
-        "Gender": gender,
-        "Date of Birth": dob,
-    }
+        return {
+            "Voter ID": voter_id,
+            "Elector's Name": electors_name,
+            "Father's Name": fathers_name,
+            "Gender": gender,
+            "Date of Birth": dob,
+        }
 
 
 def extract_voterid_details_back(image_path):

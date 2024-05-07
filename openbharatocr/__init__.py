@@ -10,6 +10,7 @@ from openbharatocr.ocr.api import (
     passport,
     voter_id_front,
     voter_id_back,
+    vehicle_registration,
 )
 
 
@@ -21,4 +22,5 @@ __all__ = [
     "passport",
     "voter_id_front",
     "voter_id_back",
+    "vehicle_registration",
 ]

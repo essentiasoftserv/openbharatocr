@@ -66,9 +66,19 @@ The two functions accepts the file paths of the front and back images of a voter
 
 
 ### Download Resources
-Some Resources need to download and set the path in the variables.
+Some resources need to be downloaded and set the path in the variables.
 - YOLO_CFG = https://drive.google.com/file/d/1SEst2lVoFDOgUVLZ5kje9GTb2tHRA8U-/view?usp=sharing
 - YOLO_WEIGHT = https://drive.google.com/file/d/1cGGstycfogmO6O7ToB2DAEXOgTWVgINh/view?usp=drive_link
+
+
+**Vehicle Registration Card/Certificate**
+
+This function takes the path of a Vehicle Registration Card/Certificate image as an input and returns its information in the form of a dictionary.
+
+```
+    import openbharatocr 
+    dict_output = openbharatocr.vehicle_registration(image_path)
+```
 
 
 ### Contribute & support

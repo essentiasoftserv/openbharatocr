@@ -137,3 +137,4 @@ def extract_water_bill_details(image_path):
 
 def water_bill(image_path):
     return extract_water_bill_details(image_path)
+

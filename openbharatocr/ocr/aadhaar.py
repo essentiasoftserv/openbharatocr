@@ -7,7 +7,6 @@ import uuid
 
 
 def extract_name(input):
-
     name_regex = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
     names = re.findall(name_regex, input)
     full_name = ""
@@ -20,7 +19,6 @@ def extract_name(input):
 
 
 def extract_fathers_name(input):
-
     regex = r"(?:S.?O|D.?O)[:\s]*([A-Za-z]+(?: [A-Za-z]+)*)"
     match = re.findall(regex, input)
     fathers_name = ""
@@ -31,7 +29,6 @@ def extract_fathers_name(input):
 
 
 def extract_aadhaar(input):
-
     regex = r"\b\d{4}\s?\d{4}\s?\d{4}\b"
     match = re.search(regex, input)
     aadhaar_number = match.group(0) if match else ""
@@ -40,7 +37,6 @@ def extract_aadhaar(input):
 
 
 def extract_dob(input):
-
     regex = r"\b(\d{2}/\d{2}/\d{4})\b"
     match = re.search(regex, input)
     dob = match.group(0) if match else ""
@@ -49,7 +45,6 @@ def extract_dob(input):
 
 
 def extract_yob(input):
-
     regex = r"\b\d{4}\b"
     match = re.search(regex, input)
     yob = match.group(0) if match else ""
@@ -58,7 +53,6 @@ def extract_yob(input):
 
 
 def extract_gender(input):
-
     if re.search("Female", input) or re.search("FEMALE", input):
         return "Female"
     if re.search("Male", input) or re.search("MALE", input):
@@ -67,7 +61,6 @@ def extract_gender(input):
 
 
 def extract_address(input):
-
     regex = r"Address:\s*((?:.|\n)*?\d{6})"
     match = re.search(regex, input)
     address = match.group(1) if match else ""
@@ -76,7 +69,6 @@ def extract_address(input):
 
 
 def extract_back_aadhaar_details(image_path):
-
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)
@@ -91,7 +83,6 @@ def extract_back_aadhaar_details(image_path):
 
 
 def extract_front_aadhaar_details(image_path):
-
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)

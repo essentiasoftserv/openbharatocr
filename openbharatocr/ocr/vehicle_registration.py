@@ -4,7 +4,6 @@ from PIL import Image
 
 
 def extract_names(input):
-
     regex_swd = r"dual\sOwner\)?\s*:?\s*([A-Z.]+\s[A-Z.]+\s[A-Z.]+)"
     match = re.search(regex_swd, input, re.IGNORECASE)
     swd = match.group(1) if match else ""
@@ -27,7 +26,6 @@ def extract_names(input):
 
 
 def extract_reg_number(input):
-
     regex = r"(?=.*\d)[A-Z0-9]{10}"
     match = re.search(regex, input)
     reg_number = match.group(0) if match else ""
@@ -36,7 +34,6 @@ def extract_reg_number(input):
 
 
 def extract_chasis(input):
-
     regex = r"[A-Z0-9]{17,18}"
     match = re.search(regex, input)
     chasis = match.group(0) if match else ""
@@ -45,7 +42,6 @@ def extract_chasis(input):
 
 
 def extract_fuel_type(input):
-
     regex = r"Fuel(?:\s+Type)?\s*[\s:\.]\s*([A-Z/]+)\s"
     match = re.search(regex, input, re.IGNORECASE)
     fuel_type = match.group(1) if match else ""
@@ -53,7 +49,6 @@ def extract_fuel_type(input):
 
 
 def extract_vehicle_class(input):
-
     regex = r"(?:Veh.c.e\sClass|Veh\sCl)\s*[\s:]\s*([A-Z0-9/()-]+)\s([A-Z0-9/()-]+)\s"
     match = re.search(regex, input, re.IGNORECASE)
     vehicle_class = match.group(1) if match else ""
@@ -61,7 +56,6 @@ def extract_vehicle_class(input):
 
 
 def extract_manufacturer(input):
-
     regex = r"MFR\s*:\s*([A-Z\s]+)\n"
     match = re.search(regex, input, re.IGNORECASE)
     manufacturer = match.group(1) if match else ""
@@ -69,7 +63,6 @@ def extract_manufacturer(input):
 
 
 def extract_tax_info(input):
-
     regex = r"Tax\sUp\s{0,1}to\s*:\s*([A-Z]+)\s"
     match = re.search(regex, input, re.IGNORECASE)
     tax_up_to = match.group(1) if match else ""
@@ -77,7 +70,6 @@ def extract_tax_info(input):
 
 
 def extract_model(input):
-
     regex = r"Mode.\s*[\s:]\s*([A-Z0-9/+()-.]+(?:\s+[^\w\n]*[A-Z0-9/+()-.]+){0,3})\s"
     match = re.search(regex, input, re.IGNORECASE)
     model = match.group(1) if match else ""
@@ -85,7 +77,6 @@ def extract_model(input):
 
 
 def extract_all_dates(input_text):
-
     regex = r"\b(\d{1,2}[/\-.](?:\d{2}|\d{4}|\w{3})[/\-.]\d{2,4})\b"
     dates = re.findall(regex, input_text)
     sorted_dates = sorted(
@@ -96,7 +87,6 @@ def extract_all_dates(input_text):
 
 
 def extract_address(input):
-
     regex = r"Address:?\s*((?:.|\n)*?\d{6})"
     match = re.search(regex, input, re.IGNORECASE)
     address = match.group(1) if match else ""
@@ -105,7 +95,6 @@ def extract_address(input):
 
 
 def extract_vehicle_registration_details(image_path):
-
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 

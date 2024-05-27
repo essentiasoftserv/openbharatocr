@@ -139,7 +139,6 @@ class Test_extract_pan_details(TestCase):
             ) as mock_extract_dob, mock.patch(
                 "openbharatocr.ocr.pan.extract_pan"
             ) as mock_extract_pan:
-
                 mock_extract_all_names.return_value = []
                 mock_extract_dob.return_value = ""
                 mock_extract_pan.return_value = ""

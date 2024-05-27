@@ -17,7 +17,6 @@ YOLO_WEIGHT = os.environ.get(
 
 
 def preprocess_for_bold_text(image):
-
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
@@ -101,7 +100,6 @@ def extract_voter_details_yolo(image_path):
 
 
 def extract_voter_id(input):
-
     regex = r".{0,3}[0-9]{7}"
     match = re.search(regex, input)
     voter_id = match.group(0) if match else ""
@@ -110,7 +108,6 @@ def extract_voter_id(input):
 
 
 def extract_names(input):
-
     regex = r"Name\s*[:=+]?\s*(.*)"
     matches = re.findall(regex, input, re.IGNORECASE)
     names = [match.strip() for match in matches] if matches else []
@@ -119,7 +116,6 @@ def extract_names(input):
 
 
 def extract_lines_with_uppercase_words(input):
-
     lines_with_uppercase_words = []
     pattern = r"\b[A-Z]+(?:\s+[A-Z]+)*\b"
     for line in input.split("\n"):
@@ -131,7 +127,6 @@ def extract_lines_with_uppercase_words(input):
 
 
 def extract_gender(input):
-
     if "Female" in input or "FEMALE" in input:
         return "Female"
     elif "Male" in input or "MALE" in input:
@@ -141,7 +136,6 @@ def extract_gender(input):
 
 
 def extract_date(input):
-
     regex = r"\b([0-9X]{2}[/\-.][0-9X]{2}[/\-.](?:\d{4}|\d{2}))\b"
     match = re.search(regex, input)
     dob = match.group(0) if match else ""
@@ -163,7 +157,6 @@ def extract_address(input):
 
 
 def extract_voterid_details_front(image_path):
-
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 
@@ -212,7 +205,6 @@ def extract_voterid_details_front(image_path):
 
 
 def extract_voterid_details_back(image_path):
-
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 
@@ -223,7 +215,6 @@ def extract_voterid_details_back(image_path):
 
 
 def voter_id_front(front_path):
-
     image = Image.open(front_path)
     extracted_text = pytesseract.image_to_string(image)
 

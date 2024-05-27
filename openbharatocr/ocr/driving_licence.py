@@ -9,7 +9,6 @@ import uuid
 
 
 def extract_driving_licence_number(input):
-
     regex = r"[A-Z]{2}[-\s]\d{13}|[A-Z]{2}[0-9]{2}\s[0-9]{11}"
     match = re.search(regex, input)
     driving_licence_number = match.group(0) if match else ""
@@ -18,7 +17,6 @@ def extract_driving_licence_number(input):
 
 
 def extract_all_dates(input):
-
     regex = r"\b\d{2}[/-]\d{2}[/-]\d{4}\b"
     dates = re.findall(regex, input)
     dates = sorted(dates, key=lambda x: int(re.split(r"[-/]", x)[-1]))
@@ -55,7 +53,6 @@ def extract_all_dates(input):
 
 
 def clean_input(match):
-
     cleaned = []
 
     for name in match:
@@ -67,7 +64,6 @@ def clean_input(match):
 
 
 def extract_all_names(input):
-
     regex = r"\b[A-Z\s]+\b"
     match = re.findall(regex, input)
 
@@ -113,7 +109,6 @@ def extract_all_names(input):
 
 
 def extract_address_regex(input):
-
     regex_list = [
         r"Address\s*:\s*\n*(.*?)(?=\n\n|\Z)",
         r"Add\b\s*(.*?)(?=\bPIN|$)",
@@ -188,7 +183,6 @@ def extract_address(image_path):
 
 
 def extract_auth_allowed(input):
-
     auth_types, auth_allowed = [
         "MCWG",
         "M.CYL.",
@@ -206,7 +200,6 @@ def extract_auth_allowed(input):
 
 
 def expired(input):
-
     try:
         date = parse(input, dayfirst=True)
         curr = datetime.now()
@@ -219,7 +212,6 @@ def expired(input):
 
 
 def extract_driving_license_details(image_path):
-
     image = Image.open(image_path)
 
     extracted_text = pytesseract.image_to_string(image)

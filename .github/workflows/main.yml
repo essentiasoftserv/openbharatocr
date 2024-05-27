@@ -19,6 +19,7 @@ jobs:
       - name: Install codespell
         run: |
           pip install pytest
+          pip install pytesseract
           pytest .
         continue-on-error: false
   spell_check:
@@ -58,6 +59,7 @@ jobs:
         uses: AlicanAkkus/pinder-action@0.1
 
   publish_to_pypi:
+    needs: [password_check, password_check, black_check, spell_check, test_case]
     runs-on: ubuntu-latest
     steps:
       - name: Check out HEAD

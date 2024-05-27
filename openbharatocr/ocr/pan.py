@@ -5,7 +5,6 @@ from PIL import Image
 
 
 def clean_input(match):
-
     cleaned = []
 
     for name in match:
@@ -17,7 +16,6 @@ def clean_input(match):
 
 
 def extract_all_names(input):
-
     regex = r"\n[A-Z\s]+\b"
     match = re.findall(regex, input)
 
@@ -36,7 +34,6 @@ def extract_all_names(input):
 
 
 def extract_pan(input):
-
     regex = r"[A-Z]{5}[0-9]{4}[A-Z]"
     match = re.search(regex, input)
     pan_number = match.group(0) if match else ""
@@ -61,7 +58,6 @@ def extract_dob(input):
 
 
 def extract_pan_details(image_path):
-
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 

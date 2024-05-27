@@ -6,7 +6,6 @@ import numpy as np
 
 
 def preprocess_for_bold_text(image):
-
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
@@ -22,7 +21,6 @@ def preprocess_for_bold_text(image):
 
 
 def extract_names(input):
-
     name_regex = r"Names[\s:]+([A-Za-z\s]+)(?:\n|$)"
     surname_regex = r"Surname[\s:]+([A-Za-z\s]+)(?:\n|$)"
 
@@ -36,7 +34,6 @@ def extract_names(input):
 
 
 def extract_all_dates(input):
-
     regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
     dates = re.findall(regex, input)
     dates = sorted(dates, key=lambda x: int(re.split(r"[-/]", x)[-1]))
@@ -53,7 +50,6 @@ def extract_all_dates(input):
 
 
 def extract_all_places(input):
-
     dates = re.findall(r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b", input)
     last_date = dates[-1] if dates else None
 
@@ -69,7 +65,6 @@ def extract_all_places(input):
 
 
 def extract_passport_number(input):
-
     regex = r"[A-Z][0-9]{7}"
     match = re.search(regex, input)
     passport_number = match.group(0) if match else ""
@@ -78,7 +73,6 @@ def extract_passport_number(input):
 
 
 def extract_details(input):
-
     lines = input.split("\n")
     clean = []
     for line in lines:
@@ -107,7 +101,6 @@ def extract_details(input):
 
 
 def extract_passport_details(image_path):
-
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
     image.save("image.jpg", "JPEG")

@@ -19,6 +19,7 @@ jobs:
       - name: Install pytest
         run: |
           pip install -r requirements.txt
+          pip install pytest
           pytest .
         continue-on-error: false
   spell_check:

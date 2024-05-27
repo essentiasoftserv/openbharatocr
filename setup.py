@@ -13,8 +13,8 @@ with open("requirements.txt", "r") as fp:
 
 setuptools.setup(
     name="openbharatocr",
-    version="0.3.0",
-    description="openbharatocr is an opensource python library for ocr Indian government documents ",
+    version="0.3.1",
+    description="openbharatocr is an opensource python library for ocr Indian government documents",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/essentiasoftserv/openbharatocr",

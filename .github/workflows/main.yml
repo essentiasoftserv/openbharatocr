@@ -9,6 +9,18 @@ on:
     branches: [main, dev, release, staging]
 
 jobs:
+  test_case:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Install codespell
+        run: |
+          pip install pytest
+          pytest .
+        continue-on-error: false
   spell_check:
     runs-on: ubuntu-latest
     steps:

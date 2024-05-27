@@ -16,10 +16,9 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Install codespell
+      - name: Install pytest
         run: |
-          pip install pytest
-          pip install pytesseract
+          pip install -r requirements.txt
           pytest .
         continue-on-error: false
   spell_check:

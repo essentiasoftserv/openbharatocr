@@ -90,6 +90,15 @@ This function takes the path of a Water Bill image as an input and returns its i
     dict_output = openbharatocr.water_bill(image_path)
 ```
 
+**Birth Certificate**
+
+This function takes the path of a Birth Certificate image as an input and returns its information in the form of a dictionary.
+
+```
+    import openbharatocr 
+    dict_output = openbharatocr.birth_certificate(image_path)
+```
+
 
 ### Contribute & support
 We are so pleased to your help and help you. If you wanna develop openbharatocr, Congrats! If you have problem, don't worry, create an issue here:

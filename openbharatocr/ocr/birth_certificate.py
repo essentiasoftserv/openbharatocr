@@ -1,6 +1,8 @@
 import re
 import pytesseract
 from PIL import Image
+import cv2
+import numpy as np
 
 
 def preprocess_for_bold_text(image):

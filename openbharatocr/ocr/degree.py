@@ -6,7 +6,7 @@ from pytesseract import Output
 
 def extract_name(input):
     regex = re.compile(
-        r"has conferred upon\s+([A-Z][a-z]+\s[A-Z][a-z]+([A-Z][a-z]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
+        r"(?: conferred upon|Certify that)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -17,7 +17,7 @@ def extract_name(input):
 
 def extract_degree_name(input):
     regex = re.compile(
-        r"\b(?:Bachelor|Master|Doctor|Associate|B\.A\.|B\.Sc\.|M\.A\.|M\.Sc\.|Ph\.D\.|M\.B\.A\.|B\.E\.|B\.Tech|M\.E\.|M\.Tech|B\.Com|M\.Com|B\.Ed|M\.Ed|B\.Pharm|M\.Pharm|B\.Arch|M\.Arch|LL\.B|LL\.M|D\.Phil|D\.Lit|BFA|MFA|MRes|MSt)\s*(?:of\s*[A-Za-z\s]+)?\b",
+        r"\b(?:Bachelor|Master|Doctor|Associate|B\.A\.|B\.Sc\.|M\.A\.|M\.Sc\.|Ph\.D\.|M\.B\.A\.|B\.E\.|B\.Tech|M\.E\.|M\.Tech|B\.Com|M\.Com|B\.Ed|M\.Ed|B\.Pharm|M\.Pharm|B\.Arch|M\.Arch|LL\.B|LL\.M|D\.Phil|D\.Lit|BFA|MFA|MRes|MSt)\s*(?:of\s*[A-Za-z]+)?\b",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -49,7 +49,7 @@ def extract_year_of_passing(input):
 
 
 def parse_degree_certificate(image_path):
-    
+
     image = cv2.imread(image_path)
 
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -64,6 +64,3 @@ def parse_degree_certificate(image_path):
     }
 
     return degree_info
-
-
-parse_degree_certificate("/home/rishabh/openbharatocr/openbharatocr/ocr/degree1.jpeg")

@@ -106,7 +106,6 @@ def parse_passbook_frontpage(image_path):
     results = reader.readtext(gray_image)
 
     extracted_text = " ".join([text for _, text, _ in results])
-    print("-----", extracted_text)
 
     passbook_info = {
         "cif_no": extract_cif_no(extracted_text),
@@ -122,6 +121,3 @@ def parse_passbook_frontpage(image_path):
     }
 
     return passbook_info
-
-
-parse_passbook_frontpage("/home/rishabh/openbharatocr/openbharatocr/ocr/passbook1.jpeg")

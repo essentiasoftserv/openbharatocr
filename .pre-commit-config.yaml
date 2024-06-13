@@ -16,3 +16,10 @@ repos:
             entry: codespell
             language: python
             types: [text]
+          
+          - id: pytest
+            name: pytest
+            description: Test the unit test
+            entry: pytest ./openbharatocr/unit_tests/
+            language: python
+            types: [python]

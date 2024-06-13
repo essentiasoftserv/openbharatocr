@@ -1,5 +1,4 @@
 class ValidFormatTest:
-
     def test_extract_name_with_aadhaar_number(self):
         """Tests name extraction with an Aadhaar number present (Valid Format)."""
         input_text = "Full Name: Amit Kumar (Aadhaar: 123456789012)"
@@ -45,7 +44,6 @@ class ValidFormatTest:
 
 
 class EmptyAndExactFormatTest:
-
     def test_extract_empty_data(self):
         """Tests name extraction with empty data."""
         input_text = ""
@@ -85,7 +83,6 @@ class EdgeCaseTest:
 
 
 class EdgeCaseTest:
-
     def test_extract_name_with_double_barreled_name(self):
         """Tests name extraction with a double-barreled name."""
         input_text = "Full Name: Amit Kumar-Singh"

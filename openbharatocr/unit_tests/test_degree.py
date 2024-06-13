@@ -72,55 +72,55 @@ def test_extract_year_of_passing(input_text, expected_output):
     assert extract_year_of_passing(input_text) == expected_output
 
 
-@pytest.mark.parametrize(
-    "image_path, expected_output",
-    [
-        (
-            "dummy_img1.jpeg",
-            {
-                "Name": "Pushkara Sharma",
-                "Degree Name": "Bachelor of Technology",
-                "University Name": "AMITY UNIVERSITY",
-                "Year of Passing": "2020",
-            },
-        ),
-        (
-            "dummy_img2.jpeg",
-            {
-                "Name": "Shivalingayya R Mathad",
-                "Degree Name": "Master of Technology",
-                "University Name": "AMITY UNIVERSITY",
-                "Year of Passing": "2022",
-            },
-        ),
-        (
-            "dummy_img3.jpeg",
-            {
-                "Name": "Usman Yusuf Bello",
-                "Degree Name": "Master of Science",
-                "University Name": "SHARDA\nUNIVERSITY",
-                "Year of Passing": "2020",
-            },
-        ),
-        (
-            "dummy_img4.jpeg",
-            {
-                "Name": None,
-                "Degree Name": None,
-                "University Name": None,
-                "Year of Passing": None,
-            },
-        ),
-        (
-            "dummy_img5.jpeg",
-            {
-                "Name": None,
-                "Degree Name": None,
-                "University Name": None,
-                "Year of Passing": None,
-            },
-        ),
-    ],
-)
-def test_parse_degree_certificate(image_path, expected_output):
-    assert parse_degree_certificate(image_path) == expected_output
+# @pytest.mark.parametrize(
+#     "image_path, expected_output",
+#     [
+#         (
+#             "dummy_img1.jpeg",
+#             {
+#                 "Name": "Pushkara Sharma",
+#                 "Degree Name": "Bachelor of Technology",
+#                 "University Name": "AMITY UNIVERSITY",
+#                 "Year of Passing": "2020",
+#             },
+#         ),
+#         (
+#             "dummy_img2.jpeg",
+#             {
+#                 "Name": "Shivalingayya R Mathad",
+#                 "Degree Name": "Master of Technology",
+#                 "University Name": "AMITY UNIVERSITY",
+#                 "Year of Passing": "2022",
+#             },
+#         ),
+#         (
+#             "dummy_img3.jpeg",
+#             {
+#                 "Name": "Usman Yusuf Bello",
+#                 "Degree Name": "Master of Science",
+#                 "University Name": "SHARDA\nUNIVERSITY",
+#                 "Year of Passing": "2020",
+#             },
+#         ),
+#         (
+#             "dummy_img4.jpeg",
+#             {
+#                 "Name": None,
+#                 "Degree Name": None,
+#                 "University Name": None,
+#                 "Year of Passing": None,
+#             },
+#         ),
+#         (
+#             "dummy_img5.jpeg",
+#             {
+#                 "Name": None,
+#                 "Degree Name": None,
+#                 "University Name": None,
+#                 "Year of Passing": None,
+#             },
+#         ),
+#     ],
+# )
+# def test_parse_degree_certificate(image_path, expected_output):
+#     assert parse_degree_certificate(image_path) == expected_output

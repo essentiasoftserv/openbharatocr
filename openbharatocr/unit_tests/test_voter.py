@@ -47,7 +47,6 @@ class test_extract_voter_id(TestCase):
 
 
 class test_extract_names(TestCase):
-
     def test_extract_names_single_name(self):
         # Test extracting a single name
         text = "The voter is Rohan."
@@ -80,7 +79,6 @@ class test_extract_names(TestCase):
 
 
 class test_extract_gender(TestCase):
-
     def test_extract_gender(self):
         # Test extracting male gender from a string
         text = "Gender: Male"
@@ -113,7 +111,6 @@ class test_extract_gender(TestCase):
 
 
 class test_extract_date(TestCase):
-
     def test_extract_date_standard_format(self):
         # Test extracting a date in standard "YYYY-MM-DD" format
         text = "The event will take place on 2024-05-03."
@@ -146,7 +143,6 @@ class test_extract_date(TestCase):
 
 
 class test_extract_address(TestCase):
-
     def test_extract_address_standard(self):
         # Test extracting a standard address
         text = "Send the package to 123 Pratap market, Jabalpur, IL 485002."

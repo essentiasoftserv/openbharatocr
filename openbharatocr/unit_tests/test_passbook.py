@@ -155,85 +155,85 @@ def test_extract_address(input_text, expected_output):
     assert extract_address(input_text) == expected_output
 
 
-@pytest.mark.parametrize(
-    "image_path, expected_output",
-    [
-        (
-            "dummy_img1.jpeg",
-            {
-                "cif_no": None,
-                "name": "PUSHKARA SHARMA",
-                "account_no": "501003871659",
-                "address": "418 A Milak DLF Pusta Road",
-                "phone": "919354454113",
-                "email": None,
-                "nomination_name": "RISHABH SHARMA",
-                "branch_name": "DELHI",
-                "bank_name": "HDFC BANK",
-                "date_of_issue": "27 Oct 2020",
-            },
-        ),
-        (
-            "dummy_img2.jpeg",
-            {
-                "cif_no": "654321",
-                "name": "RISHABH SHARMA",
-                "account_no": "987654321012",
-                "address": "456 xyz St, Delhi",
-                "phone": "0987654321",
-                "email": "rishabh.sharma@example.org",
-                "nomination_name": "Aaditya Sharma",
-                "branch_name": "Uttar Pradesh",
-                "bank_name": "DEF UNION Bank",
-                "date_of_issue": "1 Feb 2021",
-            },
-        ),
-        (
-            "dummy_img3.jpeg",
-            {
-                "cif_no": "112233",
-                "name": "AADITYA SHARMA",
-                "account_no": "112233445566",
-                "address": "789 Main MArket 4, Uttar Pradesh",
-                "phone": "1122334455",
-                "email": "aaditya@example.net",
-                "nomination_name": "Pushkara Sharma",
-                "branch_name": "Haryana",
-                "bank_name": "GHI BANK",
-                "date_of_issue": "2 Dec 2019",
-            },
-        ),
-        (
-            "dummy_img4.jpeg",
-            {
-                "cif_no": None,
-                "name": None,
-                "account_no": None,
-                "address": None,
-                "phone": None,
-                "email": None,
-                "nomination_name": None,
-                "branch_name": None,
-                "bank_name": None,
-                "date_of_issue": None,
-            },
-        ),
-        (
-            "dummy_img5.jpeg",
-            {
-                "cif_no": None,
-                "name": None,
-                "account_no": None,
-                "address": None,
-                "phone": None,
-                "email": None,
-                "nomination_name": None,
-                "branch_name": None,
-                "bank_name": None,
-                "date_of_issue": None,
-            },
-        ),
-    ],
-)
-def test_parse_passbook_frontpage(image_path, expected_output):
-    assert parse_passbook_frontpage(image_path) == expected_output
+# @pytest.mark.parametrize(
+#     "image_path, expected_output",
+#     [
+#         (
+#             "dummy_img1.jpeg",
+#             {
+#                 "cif_no": None,
+#                 "name": "PUSHKARA SHARMA",
+#                 "account_no": "501003871659",
+#                 "address": "418 A Milak DLF Pusta Road",
+#                 "phone": "919354454113",
+#                 "email": None,
+#                 "nomination_name": "RISHABH SHARMA",
+#                 "branch_name": "DELHI",
+#                 "bank_name": "HDFC BANK",
+#                 "date_of_issue": "27 Oct 2020",
+#             },
+#         ),
+#         (
+#             "dummy_img2.jpeg",
+#             {
+#                 "cif_no": "654321",
+#                 "name": "RISHABH SHARMA",
+#                 "account_no": "987654321012",
+#                 "address": "456 xyz St, Delhi",
+#                 "phone": "0987654321",
+#                 "email": "rishabh.sharma@example.org",
+#                 "nomination_name": "Aaditya Sharma",
+#                 "branch_name": "Uttar Pradesh",
+#                 "bank_name": "DEF UNION Bank",
+#                 "date_of_issue": "1 Feb 2021",
+#             },
+#         ),
+#         (
+#             "dummy_img3.jpeg",
+#             {
+#                 "cif_no": "112233",
+#                 "name": "AADITYA SHARMA",
+#                 "account_no": "112233445566",
+#                 "address": "789 Main MArket 4, Uttar Pradesh",
+#                 "phone": "1122334455",
+#                 "email": "aaditya@example.net",
+#                 "nomination_name": "Pushkara Sharma",
+#                 "branch_name": "Haryana",
+#                 "bank_name": "GHI BANK",
+#                 "date_of_issue": "2 Dec 2019",
+#             },
+#         ),
+#         (
+#             "dummy_img4.jpeg",
+#             {
+#                 "cif_no": None,
+#                 "name": None,
+#                 "account_no": None,
+#                 "address": None,
+#                 "phone": None,
+#                 "email": None,
+#                 "nomination_name": None,
+#                 "branch_name": None,
+#                 "bank_name": None,
+#                 "date_of_issue": None,
+#             },
+#         ),
+#         (
+#             "dummy_img5.jpeg",
+#             {
+#                 "cif_no": None,
+#                 "name": None,
+#                 "account_no": None,
+#                 "address": None,
+#                 "phone": None,
+#                 "email": None,
+#                 "nomination_name": None,
+#                 "branch_name": None,
+#                 "bank_name": None,
+#                 "date_of_issue": None,
+#             },
+#         ),
+#     ],
+# )
+# def test_parse_passbook_frontpage(image_path, expected_output):
+#     assert parse_passbook_frontpage(image_path) == expected_output

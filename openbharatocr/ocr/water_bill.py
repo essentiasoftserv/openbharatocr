@@ -2,6 +2,7 @@ import re
 import pytesseract
 from PIL import Image
 from datetime import datetime
+import cv2
 
 
 def preprocess_for_bold_text(image):

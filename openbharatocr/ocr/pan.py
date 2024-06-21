@@ -49,8 +49,7 @@ def extract_all_names(input):
 
     names = []
     cleaned = clean_input(match)
-
-    return names
+    return cleaned
 
 
 def extract_pan(input):

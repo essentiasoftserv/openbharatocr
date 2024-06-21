@@ -7,22 +7,21 @@ import numpy as np
 
 
 def clean_input(match):
+    """
+    Cleans the extracted text by splitting lines and removing stopwords.
+
+    Args:
+        match (list): A list of extracted text chunks.
+
+    Returns:
+        list: A cleaned list of individual names.
+    """
     cleaned = []
 
     for name in match:
         split_name = name.split("\n")
         for chunk in split_name:
             cleaned.append(chunk)
-
-    return cleaned
-
-
-def extract_all_names(input):
-    regex = r"\n[A-Z\s]+\b"
-    match = re.findall(regex, input)
-
-    names = []
-    cleaned = clean_input(match)
 
     stopwords = ["INDIA", "OF", "TAX", "GOVT", "DEPARTMENT", "INCOME"]
 
@@ -35,7 +34,35 @@ def extract_all_names(input):
     return names
 
 
+def extract_all_names(input):
+    """
+    Extracts all names from the given text using a regular expression and performs basic cleaning.
+
+    Args:
+        input (str): The text to extract names from.
+
+    Returns:
+        list: A list of extracted names.
+    """
+    regex = r"\n[A-Z\s]+\b"
+    match = re.findall(regex, input)
+
+    names = []
+    cleaned = clean_input(match)
+
+    return names
+
+
 def extract_pan(input):
+    """
+    Extracts the PAN number from the given text using a regular expression.
+
+    Args:
+        input (str): The text to extract the PAN number from.
+
+    Returns:
+        str: The extracted PAN number, or an empty string if not found.
+    """
     regex = r"[A-Z]{5}[0-9]{4}[A-Z]"
     match = re.search(regex, input)
     pan_number = match.group(0) if match else ""
@@ -44,6 +71,15 @@ def extract_pan(input):
 
 
 def extract_dob(input):
+    """
+    Extracts the date of birth from the given text using a regular expression.
+
+    Args:
+        input (str): The text to extract the date of birth from.
+
+    Returns:
+        str: The extracted date of birth in a common format (DD/MM/YYYY), or an empty string if not found.
+    """
     regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
     match = re.search(regex, input)
     dob = match.group(0) if match else ""
@@ -52,6 +88,18 @@ def extract_dob(input):
 
 
 def extract_pan_details(image_path):
+    """
+    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image.
+
+    This version attempts extraction from the original image and a converted JPEG version
+    to improve compatibility.
+
+    Args:
+        image_path (str): The path to the PAN card image.
+
+    Returns:
+        dict: A dictionary containing extracted PAN details.
+    """
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 
@@ -79,6 +127,25 @@ def extract_pan_details(image_path):
 
 
 def preprocess_for_sketch(image_path):
+    """
+    Preprocesses an image to convert it into a black and white sketch-like look
+    for improved text extraction.
+
+    This function performs several image processing steps:
+
+    1. Reads the image using OpenCV.
+    2. Converts the image to grayscale.
+    3. Applies Gaussian blur to smooth the image and reduce noise.
+    4. Applies adaptive thresholding to convert the image to binary (black and white).
+    5. Applies morphological operations (opening) to reduce noise and enhance text regions.
+    6. Inverts the image colors for better text recognition by Tesseract.
+
+    Args:
+        image_path (str): The path to the image.
+
+    Returns:
+        numpy.ndarray: The preprocessed image in a black and white sketch-like format.
+    """
     # Read the image
     image = cv2.imread(image_path)
 
@@ -104,6 +171,19 @@ def preprocess_for_sketch(image_path):
 
 
 def extract_pan_details_version2(image_path):
+    """
+    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image
+    using a pre-processing step that converts the image to a sketch-like format.
+
+    This version aims to improve extraction accuracy in cases where Version 1 might struggle.
+
+    Args:
+        image_path (str): The path to the PAN card image.
+
+    Returns:
+        dict: A dictionary containing extracted PAN details.
+    """
+
     # Preprocess the image to convert it into a black and white sketch-like look
     preprocessed_image = preprocess_for_sketch(image_path)
 
@@ -126,6 +206,23 @@ def extract_pan_details_version2(image_path):
 
 
 def pan(image_path):
+    """
+    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image.
+
+    This function attempts extraction using two versions:
+
+    1. Version 1: Extracts details from the original image and a converted JPEG version
+       to improve compatibility.
+    2. Version 2: If any details are missing from Version 1, it applies a pre-processing
+       step that converts the image to a sketch-like format and then extracts details.
+
+    Args:
+        image_path (str): The path to the PAN card image.
+
+    Returns:
+        dict: A dictionary containing extracted PAN details, with missing details from
+              Version 1 filled in by Version 2 if necessary.
+    """
     # Run Version 1
     result = extract_pan_details(image_path)
 

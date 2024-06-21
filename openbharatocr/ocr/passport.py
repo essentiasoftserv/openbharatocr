@@ -6,6 +6,23 @@ import numpy as np
 
 
 def preprocess_for_bold_text(image):
+    """
+    Preprocesses an image to enhance bold text for improved OCR extraction.
+
+    This function performs several image processing steps:
+
+    1. Converts the image to grayscale.
+    2. Applies morphological opening to reduce noise.
+    3. Increases contrast to make bold text more prominent.
+    4. Applies binarization with Otsu's thresholding.
+    5. Applies sharpening to further enhance text edges.
+
+    Args:
+        image (numpy.ndarray): The image to preprocess.
+
+    Returns:
+        numpy.ndarray: The preprocessed image with enhanced bold text.
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
@@ -21,6 +38,19 @@ def preprocess_for_bold_text(image):
 
 
 def extract_names(input):
+    """
+    Extracts first and last name from the given text using regular expressions.
+
+    This function searches for patterns containing "Names" or "Surname" followed by
+    one or more words, considering case-insensitivity.
+
+    Args:
+        input (str): The text to extract names from.
+
+    Returns:
+        tuple: A tuple containing the extracted first name and last name (both strings),
+               or empty strings if not found.
+    """
     name_regex = r"Names[\s:]+([A-Za-z\s]+)(?:\n|$)"
     surname_regex = r"Surname[\s:]+([A-Za-z\s]+)(?:\n|$)"
 
@@ -34,6 +64,17 @@ def extract_names(input):
 
 
 def extract_all_dates(input):
+    """
+    Extracts all dates in DD/MM/YYYY or DD-MM-YYYY format from the given text using a regular expression.
+
+    This function sorts the extracted dates chronologically and removes duplicates.
+
+    Args:
+        input (str): The text to extract dates from.
+
+    Returns:
+        list: A list of extracted dates in sorted order (strings).
+    """
     regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
     dates = re.findall(regex, input)
     dates = sorted(dates, key=lambda x: int(re.split(r"[-/]", x)[-1]))
@@ -50,6 +91,19 @@ def extract_all_dates(input):
 
 
 def extract_all_places(input):
+    """
+    Extracts place names from the text following the last identified date in the document,
+    assuming a newline separates dates and places.
+
+    This function filters out anything except letters, punctuation, spaces, and apostrophes,
+    and removes single-character entries.
+
+    Args:
+        input (str): The text to extract places from.
+
+    Returns:
+        list: A list of extracted place names (strings).
+    """
     dates = re.findall(r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b", input)
     last_date = dates[-1] if dates else None
 
@@ -65,6 +119,17 @@ def extract_all_places(input):
 
 
 def extract_passport_number(input):
+    """
+    Extracts the passport number from the given text using a regular expression.
+
+    This function searches for a pattern starting with a capital letter followed by 7 digits.
+
+    Args:
+        input (str): The text to extract the passport number from.
+
+    Returns:
+        str: The extracted passport number, or an empty string if not found.
+    """
     regex = r"[A-Z][0-9]{7}"
     match = re.search(regex, input)
     passport_number = match.group(0) if match else ""
@@ -73,6 +138,20 @@ def extract_passport_number(input):
 
 
 def extract_details(input):
+    """
+    Extracts name, surname, and gender from the given text using a combination of
+    regular expressions and heuristics.
+
+    This function assumes lines with only uppercase characters separated by spaces
+    represent the name and surname. It also checks the last line for "M" or "F" to infer gender.
+
+    Args:
+        input (str): The text to extract details from.
+
+    Returns:
+        tuple: A tuple containing extracted gender (string), first name (string),
+               and last name (string). Empty strings are returned if not found.
+    """
     lines = input.split("\n")
     clean = []
     for line in lines:
@@ -101,6 +180,27 @@ def extract_details(input):
 
 
 def extract_passport_details(image_path):
+    """
+    Extracts passport details from an image using a combination of OCR and text processing.
+
+    This function performs the following steps:
+
+    1. Reads the image using Pillow.
+    2. Extracts text using Tesseract (saves a JPEG copy for pre-processing).
+    3. Preprocesses the image (JPEG copy) to enhance bold text for OCR.
+    4. Extracts text again using Tesseract on the preprocessed image.
+    5. Extracts dates (DoB, DoI, Expiry) using regular expressions from the original text.
+    6. Extracts passport number using a regular expression from the original text.
+    7. Extracts places (PoB, PoI) based on text following the last date.
+    8. Extracts name, surname, and gender using heuristics on cleaned preprocessed text.
+
+    Args:
+        image_path (str): The path to the passport image.
+
+    Returns:
+        dict: A dictionary containing extracted passport details with keys like
+              "Name", "Surname", "Passport Number", etc.
+    """
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
     image.save("image.jpg", "JPEG")
@@ -138,4 +238,13 @@ def extract_passport_details(image_path):
 
 
 def passport(image_path):
+    """
+    Extracts passport details from an image using the extract_passport_details function.
+
+    Args:
+        image_path (str): The path to the passport image.
+
+    Returns:
+        dict: A dictionary containing extracted passport details.
+    """
     return extract_passport_details(image_path)

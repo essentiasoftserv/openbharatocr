@@ -3,7 +3,7 @@
 pytesseract==0.3.10
 opencv-python==4.6.0.66
 easyocr==1.7.1
-# pandas==1.4.2
+pandas==1.4.2
 # pydub==0.25.1
 # nltk==3.8.1
 # torch==2.0.0

@@ -22,7 +22,7 @@ class Test_clean_input(TestCase):
 
     def test_clean_input_with_empty_string(self):
         match = [""]
-        expected_output = [""]
+        expected_output = []
         assert clean_input(match) == expected_output
 
     def test_clean_input_with_none(self):

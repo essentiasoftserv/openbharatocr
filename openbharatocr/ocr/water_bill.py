@@ -6,6 +6,14 @@ import cv2
 
 
 def preprocess_for_bold_text(image):
+    """Preprocesses an image to enhance bold text for OCR.
+
+    Args:
+        image (numpy.ndarray): The image to preprocess.
+
+    Returns:
+        numpy.ndarray: The preprocessed image.
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
@@ -21,6 +29,14 @@ def preprocess_for_bold_text(image):
 
 
 def extract_name(input):
+    """Extracts the customer name from the text using regular expressions.
+
+    Args:
+        input (str): The text to extract the name from.
+
+    Returns:
+        str: The extracted customer name (or empty string if not found).
+    """
     regex = r"Name:\s*(.*?)(?:\.\s|(?=\n))"
     match = re.search(regex, input)
     name = match.group(1).strip() if match else ""
@@ -34,6 +50,14 @@ def extract_name(input):
 
 
 def extract_bill_amount(input):
+    """Extracts the bill amount from the text using a regular expression.
+
+    Args:
+        input (str): The text to extract the bill amount from.
+
+    Returns:
+        str: The extracted bill amount (or empty string if not found).
+    """
     regex = r"Bill Amount \(Rs\.\)\s*:? (\d+)"
     match = re.search(regex, input, re.IGNORECASE)
     bill_amount = match.group(1).strip() if match else ""
@@ -41,6 +65,18 @@ def extract_bill_amount(input):
 
 
 def extract_meter_number(input):
+    """
+    Extracts the meter number from the water bill text using a regular expression.
+
+    This function assumes the meter number is labeled as "Meter No." followed by
+    an optional colon or period and expects digits (0-9) or "NA" to represent the number.
+
+    Args:
+        input (str): The text to extract the meter number from (typically the OCR output from a water bill image).
+
+    Returns:
+        str: The extracted meter number (or an empty string if not found).
+    """
     regex = r"Meter No\.\s*:\s*(\d+|NA)"
     match = re.search(regex, input, re.IGNORECASE)
     meter_number = match.group(1).strip() if match else ""
@@ -48,6 +84,20 @@ def extract_meter_number(input):
 
 
 def extract_all_dates(input):
+    """
+    Extracts all dates in the format DD-MMM-YYYY from the given text using a regular expression.
+
+    This function assumes dates are in the format DD-MMM-YYYY (e.g., 15-Jan-2024).
+    It extracts all matching occurrences, parses them as datetime objects,
+    sorts them chronologically, and returns them as formatted strings (DD-MM-YYYY).
+
+    Args:
+        input (str): The text to extract dates from.
+
+    Returns:
+        list: A list of extracted dates in YYYY-MM-DD format (sorted chronologically),
+              or an empty list if no dates are found.
+    """
     regex = r"\b(\d{1,2}-[A-Z]{3}-\d{4})\b"
     dates = re.findall(regex, input)
     formatted_dates = []
@@ -119,6 +169,21 @@ def extract_bill_due_date(input):
 
 
 def extract_water_bill_details(image_path):
+    """Extracts water bill details from an image using OCR and regular expressions.
+
+    This function performs the following steps:
+
+    1. Opens the image using Pillow.
+    2. Extracts text using Tesseract (assuming the text is in a supported language).
+    3. Extracts various water bill details using specific regular expressions.
+
+    Args:
+        image_path (str): The path to the water bill image.
+
+    Returns:
+        dict: A dictionary containing extracted water bill information
+              (e.g., "Name", "Bill Amount", "Bill Date", etc.).
+    """
     image = Image.open(image_path)
     extracted_text = pytesseract.image_to_string(image)
 
@@ -151,4 +216,14 @@ def extract_water_bill_details(image_path):
 
 
 def water_bill(image_path):
+    """Extracts water bill details from an image.
+
+    This function is a wrapper for `extract_water_bill_details`.
+
+    Args:
+        image_path (str): The path to the water bill image.
+
+    Returns:
+        dict: A dictionary containing extracted water bill information.
+    """
     return extract_water_bill_details(image_path)

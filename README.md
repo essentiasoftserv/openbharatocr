@@ -6,6 +6,47 @@ openbharatocr is a Python library developed as open-source, designed specificall
 The features of this package:
 - It offers comprehensive support for the majority of Indian government documents, covering a wide range of document types. 
 
+#### Setting Up a Development Environment for OpenBharatOCR
+This guide details how to establish a development environment for OpenBharatOCR on a Linux system (Ubuntu/Debian preferred). If you're using Windows or macOS, consider using a virtual machine or a Linux subsystem (WSL2 on Windows, Docker on macOS).
+
+**Prerequisites:**
+
+- Operating System: Linux (Ubuntu/Debian preferred)
+- Python 3.6 or later: Check the version with `python3 --version` or `python --version` in your terminal. Download the latest installer from https://www.python.org/downloads/ if needed.
+
+**Installation:**
+
+- Clone the OpenBharatOCR repository:
+
+``` 
+git clone https://github.com/essentiasoftserv/openbharatocr.git
+``` 
+
+- Create a virtual environment (recommended):
+
+    This isolates project dependencies and avoids conflicts with system-wide packages. Use venv or virtualenv (if venv is not available):
+
+``` 
+    python3 -m venv openbharatocr_env  # Using venv
+    # OR
+    virtualenv openbharatocr_env      # Using virtualenv
+``` 
+
+- Activate the virtual environment:
+
+```
+source openbharatocr_env/bin/activate  # For venv
+# OR
+source openbharatocr_env/bin/activate  # For virtualenv
+``` 
+
+
+- Install dependencies:
+Navigate to the cloned repository directory and install required packages using pip:
+```
+    cd OpenBharatOCR
+    pip install -r requirements.txt
+   ``` 
 
 #### Installation
 
@@ -100,6 +141,15 @@ This function takes the path of a Birth Certificate image as an input and return
 ```
 
 
+**Degree**
+
+This function takes the path of a Degree image as an input and returns its information in the form of a dictionary.
+
+```
+    import openbharatocr 
+    dict_output = openbharatocr.degree(image_path)
+```
+
 ### Contribute & support
 We are so pleased to your help and help you. If you wanna develop openbharatocr, Congrats! If you have problem, don't worry, create an issue here:
 
@@ -113,3 +163,4 @@ Note: Before committing your changes, run pre-commits
 ```
     pre-commit run --all
 ```
+

@@ -6,7 +6,7 @@ openbharatocr is a Python library developed as open-source, designed specificall
 The features of this package:
 - It offers comprehensive support for the majority of Indian government documents, covering a wide range of document types. 
 
-#### Setting Up a Development Environment for OpenBharatOCR
+### Setting Up a Development Environment for OpenBharatOCR
 This guide details how to establish a development environment for OpenBharatOCR on a Linux system (Ubuntu/Debian preferred). If you're using Windows or macOS, consider using a virtual machine or a Linux subsystem (WSL2 on Windows, Docker on macOS).
 
 **Prerequisites:**
@@ -16,7 +16,7 @@ This guide details how to establish a development environment for OpenBharatOCR 
 
 **Installation:**
 
-- Clone the OpenBharatOCR repository:
+- Clone the openbharatocr repository:
 
 ``` 
 git clone https://github.com/essentiasoftserv/openbharatocr.git
@@ -44,7 +44,7 @@ source openbharatocr_env/bin/activate  # For virtualenv
 - Install dependencies:
 Navigate to the cloned repository directory and install required packages using pip:
 ```
-    cd OpenBharatOCR
+    cd openbharatocr
     pip install -r requirements.txt
    ``` 
 

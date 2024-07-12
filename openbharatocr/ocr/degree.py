@@ -90,6 +90,18 @@ def extract_year_of_passing(input):
         return match.group(1)
     return None
 
+def check_image_quality(image_path):
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
+    sharpness_threshold = 150.0
+    
+    mean_brightness = image.mean()
+    brightness_threshold = 150.0
+    
+    if variance_of_laplacian < sharpness_threshold or mean_brightness < brightness_threshold:
+        return False
+    return True
 
 def parse_degree_certificate(image_path):
     """
@@ -108,19 +120,21 @@ def parse_degree_certificate(image_path):
     Returns:
         dict: A dictionary containing the extracted information with keys "Name", "Degree Name", "University Name", and "Year of Passing". The values can be None if the corresponding information is not found in the image.
     """
+    if not check_image_quality(image_path):
+        return "Image quality is too low to process."
+    
     image = cv2.imread(image_path)
-
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+    
     extracted_text = pytesseract.image_to_string(gray_image, output_type=Output.STRING)
-
+        
     degree_info = {
         "Name": extract_name(extracted_text),
         "Degree Name": extract_degree_name(extracted_text),
         "University Name": extract_institution_name(extracted_text),
         "Year of Passing": extract_year_of_passing(extracted_text),
     }
-
+    
     return degree_info
 
 

@@ -17,7 +17,7 @@ def extract_name(input):
     The extracted recipient's name as a string, or None if no name is found.
     """
     regex = re.compile(
-        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awared to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awared to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
+        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awarded to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -90,18 +90,23 @@ def extract_year_of_passing(input):
         return match.group(1)
     return None
 
+
 def check_image_quality(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
+
     variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
     sharpness_threshold = 150.0
-    
+
     mean_brightness = image.mean()
     brightness_threshold = 150.0
-    
-    if variance_of_laplacian < sharpness_threshold or mean_brightness < brightness_threshold:
+
+    if (
+        variance_of_laplacian < sharpness_threshold
+        or mean_brightness < brightness_threshold
+    ):
         return False
     return True
+
 
 def parse_degree_certificate(image_path):
     """
@@ -122,19 +127,19 @@ def parse_degree_certificate(image_path):
     """
     if not check_image_quality(image_path):
         return "Image quality is too low to process."
-    
+
     image = cv2.imread(image_path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
+
     extracted_text = pytesseract.image_to_string(gray_image, output_type=Output.STRING)
-        
+
     degree_info = {
         "Name": extract_name(extracted_text),
         "Degree Name": extract_degree_name(extracted_text),
         "University Name": extract_institution_name(extracted_text),
         "Year of Passing": extract_year_of_passing(extracted_text),
     }
-    
+
     return degree_info
 
 

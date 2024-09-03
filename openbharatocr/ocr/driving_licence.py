@@ -2,59 +2,62 @@ import re
 import cv2
 import pytesseract
 from PIL import Image
-from datetime import datetime
+import numpy as np
 from dateutil.parser import parse
-import tempfile
-import uuid
 
 
-def extract_driving_licence_number(input):
+def preprocess_for_sketch(image_path):
     """
-    Extracts the driving license number from the provided text using regular expressions.
-
-    This function uses a regular expression pattern to match two common formats of driving license numbers in India:
-        - `[A-Z]{2}[-\s]\d{13}` (e.g., KA-01 123456789012)
-        - `[A-Z]{2}[0-9]{2}\s[0-9]{11}` (e.g., KA02 12345678901)
-
-    The function searches for these patterns in the input text and returns the matched driving license number if found, otherwise an empty string.
+    Preprocesses an image to convert it into a black and white sketch-like look
+    with black text on a white background for improved text extraction.
 
     Args:
-        input: The text extracted from the driving license image.
+        image_path (str): The path to the image.
 
     Returns:
-        str: The extracted driving license number (if found), otherwise an empty string.
+        numpy.ndarray: The preprocessed image with black text on a white background.
     """
+    # Read the image
+    image = cv2.imread(image_path)
+
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply GaussianBlur to smooth the image
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Use adaptive thresholding to highlight text regions with a clear white background
+    binary = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15
+    )
+
+    # Use bitwise inversion to make text black and background white
+    inverted_image = cv2.bitwise_not(binary)
+
+    # Detect edges using Canny edge detector
+    edges = cv2.Canny(inverted_image, threshold1=50, threshold2=150)
+
+    # Combine edges with the original grayscale to enhance text
+    sketch = cv2.addWeighted(inverted_image, 0.8, edges, 0.2, 0)
+
+    # Apply morphological operations to enhance text regions further
+    kernel = np.ones((1, 1), np.uint8)
+    processed_image = cv2.morphologyEx(sketch, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    return processed_image
+
+
+def extract_driving_licence_number(input_text):
     regex = r"[A-Z]{2}[-\s]\d{13}|[A-Z]{2}[0-9]{2}\s[0-9]{11}"
-    match = re.search(regex, input)
+    match = re.search(regex, input_text)
     driving_licence_number = match.group(0) if match else ""
 
     return driving_licence_number
 
 
-def extract_all_dates(input):
-    """
-    Extracts all dates from the provided text using regular expressions and processes them.
-
-    This function uses a regular expression `\b\d{2}[/-]\d{2}[/-]\d{4}\b` to match dates in the format DD-MM-YYYY. It then performs the following:
-        1. Sorts the extracted dates in ascending order based on the year.
-        2. Removes duplicates using a set to ensure unique dates.
-        3. Identifies the Date of Birth (DOB) as the earliest date.
-        4. Extracts the Date of Issue (DOI) as the second date if it exists.
-        5. Analyzes the remaining dates (if any) based on the year difference with DOI:
-            - Dates within a specific validity duration (default 8 years) after DOI are considered additional DOI entries.
-            - Dates beyond the validity duration are considered validity period dates.
-
-    Args:
-        input: The text extracted from the driving license image.
-
-    Returns:
-        tuple: A tuple containing three elements:
-            - dob (str): The extracted Date of Birth.
-            - doi (list): A list of extracted Dates of Issue (can be empty).
-            - validity (list): A list of extracted validity period dates (can be empty).
-    """
+def extract_all_dates(input_text):
     regex = r"\b\d{2}[/-]\d{2}[/-]\d{4}\b"
-    dates = re.findall(regex, input)
+    dates = re.findall(regex, input_text)
     dates = sorted(dates, key=lambda x: int(re.split(r"[-/]", x)[-1]))
 
     seen = set()
@@ -65,7 +68,7 @@ def extract_all_dates(input):
             seen.add(date)
             unique_dates.append(date)
 
-    dob = unique_dates[0]
+    dob = unique_dates[0] if unique_dates else ""
     doi = [unique_dates[1]] if len(unique_dates) > 1 else []
     validity = []
 
@@ -89,20 +92,6 @@ def extract_all_dates(input):
 
 
 def clean_input(match):
-    """
-    Cleans a list of potential names extracted from the text.
-
-    This function iterates through the provided list of names (potentially containing newlines) and performs the following:
-        1. Splits each name entry by newline characters.
-        2. Creates a new list to store cleaned names.
-        3. Adds each individual name chunk (after removing leading/trailing whitespaces) to the cleaned list.
-
-    Args:
-        match: A list of potential names (strings) extracted using regular expressions.
-
-    Returns:
-        list: A list containing the cleaned names (without newlines and extra spaces).
-    """
     cleaned = []
 
     for name in match:
@@ -113,29 +102,30 @@ def clean_input(match):
     return cleaned
 
 
-def extract_all_names(input):
+def extract_all_names(input_text):
     """
-    Extracts all names from the provided text using regular expressions and applies stopword removal.
-
-    This function performs the following steps:
-        1. Uses a regular expression `\b[A-Z\s]+\b` to match sequences of uppercase letters and spaces (potential names).
-        2. Applies `clean_input` to remove newlines and extra spaces from the extracted names.
-        3. Defines a list of stopwords commonly found in driving licenses (e.g., "INDIA", "LICENCE").
-        4. Filters the cleaned names, removing those containing stopwords or having a length less than 3 characters.
-        5. Returns the list of extracted full names and surnames (assuming the first name is the full name).
+    Extracts the name from the input text using keywords and patterns,
+    and filters out any names that contain stopwords.
 
     Args:
-        input: The text extracted from the driving license image.
+        input_text (str): The OCR extracted text.
 
     Returns:
-        list: A list containing the extracted full names and surnames (if found), otherwise an empty list.
+        str: The extracted name or an empty string if not found.
     """
-    regex = r"\b[A-Z\s]+\b"
-    match = re.findall(regex, input)
+    # Common keywords that precede the name in the text
+    name_keywords = [
+        "Name",
+        "NAME",
+        "Name:",
+        "NAME:",
+        "Holder",
+        "HOLDER",
+        "Name of Holder",
+        "NAME OF HOLDER",
+    ]
 
-    names = []
-    cleaned = clean_input(match)
-
+    # Stopwords that are likely to indicate non-name parts
     stopwords = [
         "INDIA",
         "OF",
@@ -165,27 +155,39 @@ def extract_all_names(input):
         "DOI",
     ]
 
-    names = [
-        name.strip()
-        for name in cleaned
-        if not any(word in name for word in stopwords) and len(name.strip()) > 3
-    ]
+    # Split the input text into lines for easier processing
+    lines = input_text.splitlines()
+    name_line = ""
 
-    return names
+    # Iterate over each line to find a potential name using keywords
+    for line in lines:
+        for keyword in name_keywords:
+            if keyword in line:
+                # Assuming name follows the keyword
+                name_line = line.split(keyword)[
+                    -1
+                ].strip()  # Get the text after the keyword
+                if name_line:
+                    break
+        if name_line:
+            break
+
+    # If a potential name line is found, further process to clean and format it
+    if name_line:
+        # Removing any trailing numbers or non-alphabet characters
+        name_line = re.sub(r"[^A-Za-z\s]", "", name_line).strip()
+
+        # Check if the extracted name contains any stopwords
+        if any(stopword in name_line.upper() for stopword in stopwords):
+            return ""  # Return an empty string if any stopword is found in the name
+
+        return name_line
+
+    # Return empty string if no name found
+    return ""
 
 
-def extract_address_regex(input):
-    """
-    Extracts the address from driving license text using regular expressions targeting specific patterns.
-
-    This function attempts to match various address formats commonly found in driving licenses using a combined regular expression. It searches for patterns like "Address:", "Add", or "ADDRESS -" followed by the actual address details.
-
-    Args:
-        input: The text extracted from the driving license image.
-
-    Returns:
-        str: The extracted address if found, otherwise an empty string.
-    """
+def extract_address_regex(input_text):
     regex_list = [
         r"Address\s*:\s*\n*(.*?)(?=\n\n|\Z)",
         r"Add\b\s*(.*?)(?=\bPIN|$)",
@@ -196,7 +198,7 @@ def extract_address_regex(input):
     ]
     regex = "|".join(regex_list)
 
-    matches = re.findall(regex, input, re.DOTALL)
+    matches = re.findall(regex, input_text, re.DOTALL)
 
     address = ""
     found = 0
@@ -218,130 +220,125 @@ def extract_address(image_path):
 
     if "Add" not in text and "ADD" not in text:
         return ""
+
     rgb = image.convert("RGB")
-    with tempfile.TemporaryDirectory() as tempdir:
-        tempfile_path = f"{tempdir}/{str(uuid.uuid4())}.jpg"
-        rgb.save(tempfile_path)
+    image = np.array(rgb)
 
-        image = cv2.imread(tempfile_path)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    config = r"--oem 3 --psm 6"
+    boxes_data = pytesseract.image_to_data(gray_image, config=config)
 
-        config = r"--oem 3 --psm 6"
-        boxes_data = pytesseract.image_to_data(gray_image, config=config)
+    boxes = boxes_data.splitlines()
+    boxes = [b.split() for b in boxes]
 
-        boxes = boxes_data.splitlines()
-        boxes = [b.split() for b in boxes]
+    left, top = -1, -1
+    for box in boxes[1:]:
+        if len(box) == 12:
+            if "Add" in box[11] or "ADD" in box[11]:
+                left = int(box[6])
+                top = int(box[7])
 
-        left, top = -1, -1
-        for box in boxes[1:]:
-            if len(box) == 12:
-                if "Add" in box[11] or "ADD" in box[11]:
-                    left = int(box[6])
-                    top = int(box[7])
+    if left == -1:
+        return extract_address_regex(text)
 
-        if left == -1:
-            return extract_address_regex(text)
+    h, w = gray_image.shape
 
-        h, w = gray_image.shape
+    right = min(left + int(0.4 * w), w)
+    bottom = min(top + int(0.18 * h), h)
 
-        right = min(left + int(0.4 * w), w)
-        bottom = min(top + int(0.18 * h), h)
+    roi = gray_image[top:bottom, left:right]
+    address = pytesseract.image_to_string(roi, config=config)
 
-        roi = gray_image[top:bottom, left:right]
-        address = pytesseract.image_to_string(roi, config=config)
+    split_address = address.split(" ")
+    split_address.remove(split_address[0])
 
-        split_address = address.split(" ")
-        split_address.remove(split_address[0])
+    address = " ".join(split_address)
 
-        address = " ".join(split_address)
-
-        return address
+    return address
 
 
-def extract_auth_allowed(input):
-    auth_types, auth_allowed = [
+def extract_auth_allowed(input_text):
+    authorizations = [
         "MCWG",
-        "M.CYL.",
-        "LMV-NT",
+        "MCWOG",
         "LMV",
+        "LMV-NT",
+        "HMV",
+        "HMV-NT",
         "TRANS",
-        "INVCRG",
-    ], []
+        "TRANS-NT",
+        "MGV",
+        "HPMV",
+        "HTV",
+        "TRAILER",
+    ]
+    allowed = []
+    for auth in authorizations:
+        if auth in input_text:
+            allowed.append(auth)
 
-    for auth in auth_types:
-        if auth in input:
-            auth_allowed.append(auth)
-
-    return auth_allowed
-
-
-def expired(input):
-    try:
-        date = parse(input, dayfirst=True)
-        curr = datetime.now()
-        diff = date - curr
-        if diff.days >= 0:
-            return False
-        return True
-    except:
-        return False
+    return allowed
 
 
-def extract_driving_license_details(image_path):
-    """
-    Extracts various details from a driving license image using OCR and text processing.
+def extract_dl_info(image_path, sketch=False):
+    if sketch:
+        image = preprocess_for_sketch(image_path)
+        image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))
+    else:
+        image_pil = Image.open(image_path)
 
-    This function performs the following steps:
-        1. Opens the image using Pillow (PIL Fork).
-        2. Extracts text from the image using Tesseract OCR.
-        3. Extracts names (full name and surname) using `extract_all_names`.
-        4. Extracts dates (DoB, DoI, validity) using `extract_all_dates`.
-        5. Extracts driving license number using `extract_driving_licence_number`.
-        6. Extracts authorized vehicle categories using `extract_auth_allowed`.
-        7. Extracts address using a combination of text processing and image analysis:
-            - If "Add" or "ADD" is not found in the text, falls back to `extract_address_regex`.
-            - Otherwise, attempts to locate the address section in the image based on bounding box information and re-extracts the address using Tesseract with a focused region of interest (ROI).
-        8. Checks the validity of the last date in `validity` and sets a remark if expired.
+    input_text = pytesseract.image_to_string(image_pil)
 
-    Args:
-        image_path: The path to the driving license image file.
-
-    Returns:
-        dict: A dictionary containing the extracted driving license details (full name, DoB, DoI, validity, license number, authorizations, address, and remark).
-    """
-    image = Image.open(image_path)
-
-    extracted_text = pytesseract.image_to_string(image)
-
-    names = extract_all_names(extracted_text)
-    full_name = names[0] if len(names) > 0 else ""
-    swd_name = names[1] if len(names) > 1 else ""
-
-    dob, issue_date, validity = extract_all_dates(extracted_text)
-
-    driving_licence_number = extract_driving_licence_number(extracted_text)
-
-    authorizations = extract_auth_allowed(extracted_text)
-
+    dob, doi, validity = extract_all_dates(input_text)
+    names = extract_all_names(input_text)
     address = extract_address(image_path)
-
-    remark = ""
-    if len(validity) and expired(validity[-1]):
-        remark = "The driving licence has been expired."
+    allowed = extract_auth_allowed(input_text)
+    licence_number = extract_driving_licence_number(input_text)
 
     return {
-        "Full Name": full_name,
-        "S/W/D": swd_name,
+        "Driving Licence Number": licence_number,
         "Date of Birth": dob,
-        "Issue Date": issue_date,
-        "Validity": validity,
-        "Driving Licence Number": driving_licence_number,
-        "Authorizations": authorizations,
+        "Date of Issue": doi,
+        "Valid Till": validity,
+        "Name": names,
         "Address": address,
-        "Remark": remark,
+        "Authorization Allowed": allowed,
     }
 
 
+def compare_results(result1, result2):
+    final_result = {}
+
+    for key in result1:
+        value1 = result1[key]
+        value2 = result2[key]
+
+        if not value1 and value2:
+            final_result[key] = value2
+        elif value1 and not value2:
+            final_result[key] = value1
+        elif value1 and value2:
+            # Compare the length of the results if both are non-empty
+            final_result[key] = value1 if len(value1) >= len(value2) else value2
+        else:
+            final_result[key] = None
+
+    return final_result
+
+
+def extract_driving_license_data(image_path):
+    # Extracting data without preprocessing
+    normal_result = extract_dl_info(image_path, sketch=False)
+
+    # Extracting data with sketch-like preprocessing
+    sketch_result = extract_dl_info(image_path, sketch=True)
+
+    # Comparing results to get the most accurate information
+    final_result = compare_results(normal_result, sketch_result)
+
+    return final_result
+
+
 def driving_licence(image_path):
-    return extract_driving_license_details(image_path)
+    return extract_driving_license_data(image_path)

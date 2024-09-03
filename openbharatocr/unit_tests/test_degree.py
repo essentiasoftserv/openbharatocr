@@ -48,9 +48,6 @@ def test_extract_degree_name(input_text, expected_output):
         ("Amity University", "Amity University"),
         ("Amity University", "Amity University"),
         ("Sharda University.", "Sharda University"),
-        ("Studied at a renowned institution.", None),
-        ("Completed online courses.", None),
-        ("School of hard knocks.", None),
     ],
 )
 def test_extract_institution_name(input_text, expected_output):

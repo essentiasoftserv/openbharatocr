@@ -272,6 +272,7 @@ def extract_auth_allowed(input_text):
         "HPMV",
         "HTV",
         "TRAILER",
+        "M.CYL.",
     ]
     allowed = []
     for auth in authorizations:

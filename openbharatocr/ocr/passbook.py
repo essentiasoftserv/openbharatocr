@@ -1,169 +1,69 @@
 import cv2
-import easyocr
+import numpy as np
+import pytesseract
 import re
 
+# Function to enhance contrast of the image for better OCR results
+def enhance_contrast(image):
+    # Convert image to LAB color space
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to L-channel
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    cl = clahe.apply(l)
+    # Merge channels back and convert to BGR color space
+    limg = cv2.merge((cl, a, b))
+    enhanced_image = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    return enhanced_image
 
-def extract_name(input):
-    """
-    Extracts the customer name from the given text using a regular expression.
+# Main preprocessing function for OCR
+def preprocess_image(image_path, dpi=400):
+    # Read the image
+    image = cv2.imread(image_path)
 
-    Args:
-        input (str): The text to extract the name from.
+    # Step 1: Enhance contrast
+    enhanced_image = enhance_contrast(image)
 
-    Returns:
-        str: The extracted customer name, or None if not found.
-    """
-    regex = re.compile(r"Customer Name\s+([A-Z\s]+)")
-    match = re.search(regex, input)
-    if match:
-        return match.group(1).strip()
-    return None
+    # Step 2: Convert to grayscale
+    gray = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
 
+    # Step 3: Rescale the image for higher DPI (adjust dimensions to DPI)
+    scale_factor = dpi / 72  # Typical screen DPI is 72, so scale to 300 DPI
+    new_size = (int(gray.shape[1] * scale_factor), int(gray.shape[0] * scale_factor))
+    scaled_image = cv2.resize(gray, new_size, interpolation=cv2.INTER_CUBIC)
 
-def extract_open_date(input):
-    """
-    Extracts the account open date from the given text using a regular expression.
+    # Step 4: Remove noise using GaussianBlur
+    blurred = cv2.GaussianBlur(scaled_image, (5, 5), 0)
 
-    Args:
-        input (str): The text to extract the open date from.
+    # Step 5: Thresholding (binarization) - Convert text to black and background to white
+    _, binary_image = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    Returns:
-        str: The extracted account open date in DD MMM YYYY format, or None if not found.
-    """
-    regex = re.compile(r"Open Date\s*(\d{1,2} \w{3} \d{4})")
-    match = re.search(regex, input)
-    if match:
-        return match.group(1)
-    return None
+    # Step 6: Morphological operations (opening) to clean up the image
+    kernel = np.ones((1, 1), np.uint8)
+    opened_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
 
+    return opened_image
 
-def extract_bank_name(input):
-    """
-    Extracts the bank name from the given text using a regular expression.
+# Function to clean OCR-extracted text for more reliable data extraction
+def clean_text(input_text):
+    # Correction map to handle common OCR mistakes
+    corrections = {
+        "Iqumber": "Number",
+        "Nr":"Mr",
+        # Add more common corrections here
+    }
 
-    This function searches for patterns containing "Bank", "Bank Ltd",
-    "Bank Limited", or "Credit Union" considering case-insensitivity
-    and matches across multiple lines.
+    # Apply corrections
+    for wrong, correct in corrections.items():
+        input_text = re.sub(re.escape(wrong), correct, input_text, flags=re.IGNORECASE)
 
-    Args:
-        input (str): The text to extract the bank name from.
+    # Clean non-alphanumeric characters except for common separators
+    input_text = re.sub(r"[^a-zA-Z0-9\s@.,/]", "", input_text)
+    input_text = re.sub(r"\s{2,}", " ", input_text)  # Reduce multiple spaces to one space
+    return input_text.strip()
 
-    Returns:
-        str: The extracted bank name, or None if not found.
-    """
-    regex = re.compile(
-        r"\b[A-Za-z\s&]+(?:BANK|BANK LTD|BANK LIMITED|CREDIT UNION)\b", re.MULTILINE
-    )
-    match = re.search(regex, input)
-    if match:
-        return match.group(0).strip()
-    else:
-        return None
-
-
-def extract_phone(input):
-    """
-    Extracts the phone number from the given text using a regular expression.
-
-    This function searches for patterns starting with "Mobile No" and extracts
-    the following digits, considering case-insensitivity.
-
-    Args:
-        input (str): The text to extract the phone number from.
-
-    Returns:
-        str: The extracted phone number, or None if not found.
-    """
-    regex = re.compile(r"Mobile No\s*(\d+)", re.IGNORECASE)
-    match = re.search(regex, input)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def extract_branch_name(input):
-    """
-    Extracts the branch name from the given text using a regular expression.
-
-    This function searches for patterns starting with "Branch Name" and extracts
-    the following text, considering case-insensitivity.
-
-    Args:
-        input (str): The text to extract the branch name from.
-
-    Returns:
-        str: The extracted branch name, or None if not found.
-    """
-    regex = re.compile(r"Branch Name\s*([A-Za-z\d\s-]+)", re.IGNORECASE)
-    match = re.search(regex, input)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def extract_nomination_name(input):
-    """
-    Extracts the nomination name from the given text using a regular expression.
-
-    This function searches for patterns containing "Nominee" or "Nomination"
-    followed by two capitalized words.
-
-    Args:
-        input (str): The text to extract the nomination name from.
-
-    Returns:
-        str: The extracted nomination name (full name), or None if not found.
-    """
-    regex = re.compile(r"Nomina(?:non|tion)\s+([A-Z][a-z]+\s[A-Z][a-z]+)")
-    match = re.search(regex, input)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def extract_email(input):
-    """
-    Extracts the email address from the given text using a regular expression.
-
-    This function searches for email addresses in the format of username@domain.com,
-    where username can contain letters, numbers, periods, underscores, plus signs,
-    and hyphens, and domain can contain letters, numbers, periods, and hyphens.
-
-    Args:
-        input (str): The text to extract the email address from.
-
-    Returns:
-        str: The extracted email address, or None if not found.
-    """
-
-    regex = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-    match = re.search(regex, input)
-    if match:
-        return match.group(0)
-    return None
-
-
-def extract_account_no(input):
-    """
-    Extracts the account number from the given text using a regular expression.
-
-    This function searches for patterns containing "Account Number:" followed by
-    9 to 12 digits, considering case-insensitivity.
-
-    Args:
-        input (str): The text to extract the account number from.
-
-    Returns:
-        str: The extracted account number, or None if not found.
-    """
-    regex = re.compile(r"Account Number:\s*(\d{9,12})", re.IGNORECASE)
-    match = re.search(regex, input)
-    if match:
-        return match.group(1)
-    return None
-
-
-def extract_cif_no(input):
+# Functions to extract specific fields using regular expressions
+def extract_cif_no(input_text):
     """
     Extracts the CIF number from the given text using a regular expression.
 
@@ -176,14 +76,48 @@ def extract_cif_no(input):
     Returns:
         str: The extracted CIF number, or None if not found.
     """
-    regex = re.compile(r"CIF(?: No)?\.?\s*(\d+)", re.IGNORECASE)
-    match = re.search(regex, input)
+    regex = re.compile(r"CIF(?:\s*No)?\.?\s*(\d+)", re.IGNORECASE)
+    match = re.search(regex, input_text)
     if match:
         return match.group(1)
     return None
 
+def extract_name(input_text):
+    """
+    Extracts the customer name from the given text using a regular expression.
 
-def extract_address(input):
+    Args:
+        input (str): The text to extract the name from.
+
+    Returns:
+        str: The extracted customer name, or None if not found.
+    """
+    regex = re.compile(r"(?:Name\s*[:.]?\s*([A-Za-z\s]+))", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
+
+def extract_account_no(input_text):
+    """
+    Extracts the account number from the given text using a regular expression.
+
+    This function searches for patterns containing "Account Number:" followed by
+    9 to 14 digits, considering case-insensitivity.
+
+    Args:
+        input (str): The text to extract the account number from.
+
+    Returns:
+        str: The extracted account number, or None if not found.
+    """
+    regex = re.compile(r"Account(?:\s*No)?\.?\s*(\d+)", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
+
+def extract_address(input_text):
     """
     Extracts the address from the given text using a regular expression.
 
@@ -197,57 +131,103 @@ def extract_address(input):
     Returns:
         str: The extracted address, or None if no matching pattern is found.
     """
-    regex = [
-        r"\d+\s[A-Za-z\s,]+(?:Road|Street|Avenue|Boulevard|Lane|Drive|Court|Place|Square|Plaza|Terrace|Trail|Parkway|Circle)\s*,?\s*(?:\d{5}|\d{5}-\d{4})?",
-        r"\d+\s[A-Za-z\s,]+(?:Road|Street|Avenue|Boulevard|Lane|Drive|Court|Place|Square|Plaza|Terrace|Trail|Parkway|Circle)",
-        r"\d{1,5}\s[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*\d{5}",
-        r"\d{1,5}\s[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*[A-Za-z\s]+",
-        r"\d{1,5}\s[A-Za-z\s]+,\s*[A-Za-z\s]+",
-        r"[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*\d{5}",
-        r"[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*\d{5}",
-        r"[A-Za-z\s]+,\s*\d{5}",
-    ]
-    for pattern in regex:
-        match = re.search(pattern, input)
-        if match:
-            return match.group(0).strip()
+    regex = re.compile(r"Address:\s*([A-Za-z\s,]+)", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
     return None
 
-
-def parse_passbook_frontpage(image_path):
+def extract_phone(input_text):
     """
-    Parses a passbook front page image to extract various customer and account information.
+    Extracts the phone number from the given text using a regular expression.
 
-    This function uses EasyOCR to read text from the image and then employs regular expressions
-    to extract specific details like name, account number, address, phone number, etc.
+    This function searches for patterns starting with "Mobile No" and extracts
+    the following digits, considering case-insensitivity.
 
     Args:
-        image_path (str): The path to the passbook front page image.
+        input (str): The text to extract the phone number from.
 
     Returns:
-        dict: A dictionary containing the extracted passbook information.
+        str: The extracted phone number, or None if not found.
     """
-    reader = easyocr.Reader(["en"])
+    regex = re.compile(r"Phone(?: No)?\.?\s*(\d+)", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
 
-    image = cv2.imread(image_path)
+def extract_branch_name(input_text):
+    """
+    Extracts the branch name from the given text using a regular expression.
 
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    This function searches for patterns starting with "Branch Name" and extracts
+    the following text, considering case-insensitivity.
 
-    results = reader.readtext(gray_image)
+    Args:
+        input (str): The text to extract the branch name from.
 
-    extracted_text = " ".join([text for _, text, _ in results])
+    Returns:
+        str: The extracted branch name, or None if not found.
+    """
+    regex = re.compile(r"Branch:\s*([A-Za-z\s]+)", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
 
+def extract_generic_bank_name(input_text):
+    """
+    Extracts the bank name from the given text using a regular expression.
+
+    This function searches for patterns containing "Bank across multiple lines".
+
+    Args:
+        input (str): The text to extract the bank name from.
+
+    Returns:
+        str: The extracted bank name, or None if not found.
+    """
+    regex = re.compile(r"\b([A-Za-z\s]+Bank(?:\s*Ltd|\s*Co)?\b)", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
+
+def extract_open_date(input_text):
+    """
+    Extracts the account open date from the given text using a regular expression.
+
+    Args:
+        input (str): The text to extract the open date from.
+
+    Returns:
+        str: The extracted account open date in DD MMM YYYY format, or None if not found.
+    """
+    regex = re.compile(r"Opening\s*Dt[:\.]?\s*(\d{2}/\d{2}/\d{4})", re.IGNORECASE)
+    match = re.search(regex, input_text)
+    if match:
+        return match.group(1)
+    return None
+
+# Function to process and extract information from the passbook
+def parse_passbook(image_path):
+    preprocessed_image = preprocess_image(image_path, dpi=400)
+    extracted_text = pytesseract.image_to_string(preprocessed_image)
+
+    # Clean the extracted text
+    cleaned_text = clean_text(extracted_text)
+    print("Cleaned Extracted Text:", cleaned_text)
+
+    # Extract key information from the cleaned text
     passbook_info = {
-        "cif_no": extract_cif_no(extracted_text),
-        "name": extract_name(extracted_text),
-        "account_no": extract_account_no(extracted_text),
-        "address": extract_address(extracted_text),
-        "phone": extract_phone(extracted_text),
-        "email": extract_email(extracted_text),
-        "nomination_name": extract_nomination_name(extracted_text),
-        "branch_name": extract_branch_name(extracted_text),
-        "bank_name": extract_bank_name(extracted_text),
-        "date_of_issue": extract_open_date(extracted_text),
+        "cif_no": extract_cif_no(cleaned_text),
+        "name": extract_name(cleaned_text),
+        "account_no": extract_account_no(cleaned_text),
+        "address": extract_address(cleaned_text),
+        "phone": extract_phone(cleaned_text),
+        "branch_name": extract_branch_name(cleaned_text),
+        "bank_name": extract_generic_bank_name(cleaned_text),
+        "date_of_issue": extract_open_date(cleaned_text),
     }
 
     return passbook_info

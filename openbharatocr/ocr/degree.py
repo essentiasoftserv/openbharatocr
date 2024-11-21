@@ -17,7 +17,7 @@ def extract_name(input):
     The extracted recipient's name as a string, or None if no name is found.
     """
     regex = re.compile(
-        r"(?: conferred upon|Certify that)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
+        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awarded to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -39,7 +39,7 @@ def extract_degree_name(input):
     The extracted degree name as a string, or None if no degree name is found.
     """
     regex = re.compile(
-        r"\b(?:Bachelor|Master|Doctor|Associate|B\.A\.|B\.Sc\.|M\.A\.|M\.Sc\.|Ph\.D\.|M\.B\.A\.|B\.E\.|B\.Tech|M\.E\.|M\.Tech|B\.Com|M\.Com|B\.Ed|M\.Ed|B\.Pharm|M\.Pharm|B\.Arch|M\.Arch|LL\.B|LL\.M|D\.Phil|D\.Lit|BFA|MFA|MRes|MSt)\s*(?:of\s*[A-Za-z]+)?\b",
+        r"\b(?:Bachelor|Bachelors|Master|Doctor|Associate|B\.A\.|B\.Sc\.|M\.A\.|M\.Sc\.|Ph\.D\.|M\.B\.A\.|B\.E\.|B\.Tech|M\.E\.|M\.Tech|B\.Com|M\.Com|B\.Ed|M\.Ed|B\.Pharm|M\.Pharm|B\.Arch|M\.Arch|LL\.B|LL\.M|D\.Phil|D\.Lit|BFA|MFA|MRes|MSt)\s*(?:of\s*[A-Za-z]+)?\b",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -61,7 +61,7 @@ def extract_institution_name(input):
     The extracted institution name as a string, or None if no institution name is found.
     """
     regex = re.compile(
-        r"\b(?:[A-Za-z\s&]+(?:College|University|Institute|Academy|School|Polytechnic|Center|Centre|Faculty|Campus|School of [A-Za-z\s]+|College of [A-Za-z\s]+|Institute of [A-Za-z\s]+|University of [A-Za-z\s]+))\b",
+        r"\b(?:College of [A-Za-z\s]+|[A-Z][a-z]*\sInstitute of [A-Za-z]+|(?:UNIVERSITY OF [A-Za-z]+|[w A-Za-z]*\s(University|Aniversity)?))",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
@@ -82,13 +82,30 @@ def extract_year_of_passing(input):
     The extracted year of passing as a string, or None if no year of passing is found.
     """
     regex = re.compile(
-        r"(?:year\s*of\s*passing|in\s*the\s*year|having\s*passed\s*the\s*examination\s*of|passed\s*in|dated)\s*[:\-]?\s*(\d{4})",
+        r"\b(nineteen (hundred|hundred and) (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|twenty[- ]one|twenty[- ]two|twenty[- ]three|twenty[- ]four|twenty[- ]five|twenty[- ]six|twenty[- ]seven|twenty[- ]eight|twenty[- ]nine|thirty|forty|fifty|sixty|seventy|eighty|ninety)([- ](one|two|three|four|five|six|seven|eight|nine))?|\d{4}|(two|too|tfoo|tw)\s*(thousand|thousand and)\s*(one|two|three|four|five|six|seven|eight|nine|ten|tex|eleven|twelve|thirteen|fourteen|fifteen|fiventy|sixteen|seventeen|eighteen|nineteen|twenty|twenty[- ]one|twenty[- ]two|twenty[- ]three|twenty[- ]four|twenty[- ]five|twenty[- ]six|twenty[- ]seven|twenty[- ]eight|twenty[- ]nine))\b",
         re.IGNORECASE,
     )
     match = re.search(regex, input)
     if match:
         return match.group(1)
     return None
+
+
+def check_image_quality(image_path):
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
+    sharpness_threshold = 150.0
+
+    mean_brightness = image.mean()
+    brightness_threshold = 150.0
+
+    if (
+        variance_of_laplacian < sharpness_threshold
+        or mean_brightness < brightness_threshold
+    ):
+        return False
+    return True
 
 
 def parse_degree_certificate(image_path):
@@ -108,8 +125,10 @@ def parse_degree_certificate(image_path):
     Returns:
         dict: A dictionary containing the extracted information with keys "Name", "Degree Name", "University Name", and "Year of Passing". The values can be None if the corresponding information is not found in the image.
     """
-    image = cv2.imread(image_path)
+    if not check_image_quality(image_path):
+        return "Image quality is too low to process."
 
+    image = cv2.imread(image_path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     extracted_text = pytesseract.image_to_string(gray_image, output_type=Output.STRING)

@@ -5,6 +5,7 @@ import numpy as np
 from pytesseract import Output
 from PIL import Image
 
+
 def preprocess_image(image_path):
     """
     Preprocesses the image to enhance text for OCR.
@@ -25,15 +26,18 @@ def preprocess_image(image_path):
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Apply adaptive thresholding to create a binary image
-    binary = cv2.adaptiveThreshold(blurred, 255, 
-                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                   cv2.THRESH_BINARY_INV, 11, 2)
+    binary = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2
+    )
 
     # Invert colors for better OCR performance
     inverted_image = cv2.bitwise_not(binary)
 
     return inverted_image
+
+
 import re
+
 
 def extract_name(text):
     """
@@ -56,21 +60,23 @@ def extract_name(text):
         r"testify that",
         r"known that",
         r"admits",
-        r"granted"
+        r"granted",
     ]
-    
+
     # Create a regex pattern by joining all patterns with an optional whitespace and capturing the name
-    name_pattern = r"(?:{})\s+([A-Z][a-zA-Z' -]+(?:\s[A-Z][a-zA-Z' -]+)*)".format("|".join(patterns))
-    
+    name_pattern = r"(?:{})\s+([A-Z][a-zA-Z' -]+(?:\s[A-Z][a-zA-Z' -]+)*)".format(
+        "|".join(patterns)
+    )
+
     # Compile the regex with case insensitivity
     regex = re.compile(name_pattern, re.IGNORECASE)
-    
+
     # Search for the pattern in the input text
     match = regex.search(text)
-    
+
     if match:
         return match.group(1).strip()
-    
+
     return None
 
 
@@ -191,7 +197,7 @@ def parse_degree_certificate(image_path):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     preprocessed_image = preprocess_image(image_path)
     extracted_text = pytesseract.image_to_string(gray_image, output_type=Output.STRING)
-    
+
     degree_info = {
         "Name": extract_name(extracted_text),
         "Degree Name": extract_degree_name(extracted_text),

@@ -4,6 +4,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
+
 def preprocess_for_bold_text(image):
     """
     Preprocesses an image to enhance bold text for improved OCR extraction.
@@ -35,6 +36,7 @@ def preprocess_for_bold_text(image):
 
     return sharpened
 
+
 def extract_names(input):
     """
     Extracts first and last name from the given text using regular expressions.
@@ -59,16 +61,19 @@ def extract_names(input):
     surname = surname_match.group(1).strip() if surname_match else ""
 
     return name, surname
+
+
 import datetime
+
 
 def extract_all_dates(input):
     regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
     matches = re.findall(regex, input)
-    
+
     unique_dates = set()
     for match in matches:
         try:
-            if match[2] == '/':
+            if match[2] == "/":
                 date_obj = datetime.strptime(match, "%d/%m/%Y")
             else:
                 date_obj = datetime.strptime(match, "%d-%m-%Y")
@@ -79,14 +84,20 @@ def extract_all_dates(input):
     sorted_dates = sorted(unique_dates)
     return [date.strftime("%d-%m-%Y") for date in sorted_dates]
 
+
 def extract_all_places(input):
     # Split input by lines
     lines = input.splitlines()
     places = []
     for line in lines:
-        if re.match(r'^[A-Z,. -\'"]+$', line) and line.strip() and line.strip().count(' ') > 0:
+        if (
+            re.match(r'^[A-Z,. -\'"]+$', line)
+            and line.strip()
+            and line.strip().count(" ") > 0
+        ):
             places.append(line.strip())
     return places
+
 
 def extract_passport_number(input):
     """
@@ -105,6 +116,7 @@ def extract_passport_number(input):
     passport_number = match.group(0) if match else ""
 
     return passport_number
+
 
 def extract_details(input):
     """
@@ -146,6 +158,7 @@ def extract_details(input):
             gender = "Female"
 
     return gender, name, surname
+
 
 def extract_passport_details(image_path):
     """
@@ -203,6 +216,7 @@ def extract_passport_details(image_path):
         "Date of Issue": doi,
         "Expiry Date": expiry_date,
     }
+
 
 def passport(image_path):
     """

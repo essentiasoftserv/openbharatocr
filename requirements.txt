@@ -5,12 +5,9 @@ pytesseract==0.3.10
 opencv-python==4.6.0.66
 easyocr==1.7.1
 numpy==1.26.4
-paddlepaddle==3.0.0
 
-# pandas==1.4.2
-# pydub==0.25.1
-# nltk==3.8.1
-# torch==2.0.0
+fuzzywuzzy
+paddlepaddle==3.0.0
 # pyannote.audio==3.0.0
 # transformers==4.36.0
 # boto3==1.26.106

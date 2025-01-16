@@ -1,10 +1,12 @@
-import re
-import pytesseract
-from PIL import Image
-from datetime import datetime
 import cv2
+import pytesseract
+import re
+import numpy as np
+from datetime import datetime
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
-
+# Preprocess the image to enhance bold text for OCR
 def preprocess_for_bold_text(image):
     """Preprocesses an image to enhance bold text for OCR.
 
@@ -27,203 +29,121 @@ def preprocess_for_bold_text(image):
 
     return sharpened
 
+# FuzzyWuzzy correction function
+def fuzzy_correct(text, possible_corrections):
+    """Corrects text using fuzzy matching from possible corrections."""
+    if not text:
+        return text
+    best_match = process.extractOne(text, possible_corrections)
+    return best_match[0] if best_match and best_match[1] > 80 else text
 
-def extract_name(input):
-    """Extracts the customer name from the text using regular expressions.
+# Extracting the amount from the image (using various strategies)
+def extract_amount(extracted_text):
+    amount_keywords = [
+        "Total Amount Due", "Amount Due", "Net Amount", "Amount to be Paid",
+        "TOTAL AMOUNT DUE", "Amount Due Rs", "Amount Due in Rs",
+        "OTAL DUE", "TOTAL"
+    ]
+    
+    for keyword in amount_keywords:
+        keyword_regex = rf"(?i){keyword}\s*:?\s*(\D*\d+\.?\d*)"
+        match = re.search(keyword_regex, extracted_text)
+        if match:
+            amount = re.sub(r'[^\d.]', '', match.group(1))
+            return float(amount) if amount else "Amount not found"
+    
+    amount_regex = r"(?i)(?:\D?)(\d{1,3}(?:[\s.,]?\d{3})*(?:[\s.,]?\d{1,2})?)"
+    amounts = re.findall(amount_regex, extracted_text)
+    valid_amounts = [amount.replace(' ', '').replace(',', '') for amount in amounts if amount]
+    valid_amounts = [float(amount) for amount in valid_amounts if amount.replace('.', '', 1).isdigit()]
+    return max(valid_amounts) if valid_amounts else "Amount not found"
 
-    Args:
-        input (str): The text to extract the name from.
+# Extracting phone numbers
+def extract_phone_numbers(extracted_text):
+    phone_regex = r"(?i)(?:phone|telephone|mobile|contact|tel|cell|no|number)\s*[:\-]?\s*(\+?\d{1,3}[-.\s]?)?(\(?\d{3,5}\)?[-.\s]?)?\d{3,5}[-.\s]?\d{4,7}"
+    phone_numbers = re.findall(phone_regex, extracted_text)
+    phone_numbers = [''.join(part for part in match if part) for match in phone_numbers]
+    return phone_numbers if phone_numbers else ["Phone number not found"]
 
-    Returns:
-        str: The extracted customer name (or empty string if not found).
-    """
-    regex = r"Name:\s*(.*?)(?:\.\s|(?=\n))"
-    match = re.search(regex, input)
-    name = match.group(1).strip() if match else ""
+# Extracting bill number using regex and fuzzy correction
+def extract_bill_number(extracted_text):
+    bill_number_regex = r"(?i)(?:bill no\.?|bill number|bill id|invoice no\.?|soa #|transaction id)\s*[:\-]?\s*(\d{10,})"
+    bill_match = re.search(bill_number_regex, extracted_text)
+    if bill_match:
+        return fuzzy_correct(bill_match.group(1).strip(), ["bill", "number", "no", "id"])
+    
+    additional_bill_number_regex = r"(?i)(?:bill id|transaction id|invoice no)\s*[:\-]?\s*(\d{10,})"
+    additional_bill_match = re.search(additional_bill_number_regex, extracted_text)
+    return fuzzy_correct(additional_bill_match.group(1).strip(), ["bill", "number", "no", "id"]) if additional_bill_match else "Bill number not found"
 
-    if name == "":
-        regex = r"(?:Mr\sMrs\s*[:\s]?\s*)(.*?)(?:\bConsumer\b|['/]|$)"
-        match = re.search(regex, input, re.IGNORECASE)
-        name = match.group(1).strip() if match else ""
+# Extracting account number using regex and fuzzy correction (updated regex for new format)
+def extract_account_number(extracted_text):
+    account_keywords = [
+        "Contract Account No", "Account No", "Account Number", "Contract Account",
+        "Account ID", "Customer ID", "Seq No", "Seq No"
+    ]
+    # Build a regex pattern that looks for these keywords
+    account_number_regex = r"(?i)(" + "|".join(account_keywords) + r")\s*[:\-]?\s*(\d{8,20})"
+    account_match = re.search(account_number_regex, extracted_text)
+    return fuzzy_correct(account_match.group(2).strip(), ["account", "number", "seq"]) if account_match else "Account number not found"
 
-    return name
+# Extracting meter number using regex and fuzzy correction (updated regex for new format)
+def extract_meter_number(extracted_text):
+    meter_number_regex = r"(?i)(?:meter\s*no\.?|meter\s*number|meter\s*id|mru\s*no)\s*[:\-]?\s*([\w\s]+)"
+    meter_match = re.search(meter_number_regex, extracted_text)
+    return fuzzy_correct(meter_match.group(1).strip(), ["meter", "number", "no", "id"]) if meter_match else "Meter number not found"
 
+# Extracting ID number using regex and fuzzy correction
+def extract_id_number(extracted_text):
+    id_number_regex = r"(?i)(?:id no\.?|id number|tin|seq no)\s*[:\-]?\s*(\d{3}[-\d]{3,})"
+    id_match = re.search(id_number_regex, extracted_text)
+    return fuzzy_correct(id_match.group(1).strip(), ["id", "number", "seq"]) if id_match else "ID number not found"
 
-def extract_bill_amount(input):
-    """Extracts the bill amount from the text using a regular expression.
+# Extracting area code
+def extract_area_code(extracted_text):
+    area_code_regex = r"(?i)(?:area code|region code)\s*[:\-]?\s*(\d{3,5})"
+    area_code_match = re.search(area_code_regex, extracted_text)
+    return area_code_match.group(1).strip() if area_code_match else "Area code not found"
 
-    Args:
-        input (str): The text to extract the bill amount from.
+# Extracting name from the image (customer, owner, etc.)
+def extract_name(extracted_text):
+    name_regex = r"(?i)(?:name|account name|consumer name|owner name)\s*[:\-]?\s*([A-Za-z\s]+)"
+    name_match = re.search(name_regex, extracted_text)
+    return name_match.group(1).strip() if name_match else "Name not found"
 
-    Returns:
-        str: The extracted bill amount (or empty string if not found).
-    """
-    regex = r"Bill Amount \(Rs\.\)\s*:? (\d+)"
-    match = re.search(regex, input, re.IGNORECASE)
-    bill_amount = match.group(1).strip() if match else ""
-    return bill_amount
+# Extracting address from the image
+def extract_address(extracted_text):
+    address_regex = r"(?i)(?:address)\s*[:\-]?\s*([^\n]+)"
+    address_match = re.search(address_regex, extracted_text)
+    return address_match.group(1).strip() if address_match else "Address not found"
 
-
-def extract_meter_number(input):
-    """
-    Extracts the meter number from the water bill text using a regular expression.
-
-    This function assumes the meter number is labeled as "Meter No." followed by
-    an optional colon or period and expects digits (0-9) or "NA" to represent the number.
-
-    Args:
-        input (str): The text to extract the meter number from (typically the OCR output from a water bill image).
-
-    Returns:
-        str: The extracted meter number (or an empty string if not found).
-    """
-    regex = r"Meter No\.\s*:\s*(\d+|NA)"
-    match = re.search(regex, input, re.IGNORECASE)
-    meter_number = match.group(1).strip() if match else ""
-    return meter_number
-
-
-def extract_all_dates(input):
-    """
-    Extracts all dates in the format DD-MMM-YYYY from the given text using a regular expression.
-
-    This function assumes dates are in the format DD-MMM-YYYY (e.g., 15-Jan-2024).
-    It extracts all matching occurrences, parses them as datetime objects,
-    sorts them chronologically, and returns them as formatted strings (DD-MM-YYYY).
-
-    Args:
-        input (str): The text to extract dates from.
-
-    Returns:
-        list: A list of extracted dates in YYYY-MM-DD format (sorted chronologically),
-              or an empty list if no dates are found.
-    """
-    regex = r"\b(\d{1,2}-[A-Z]{3}-\d{4})\b"
-    dates = re.findall(regex, input)
-    formatted_dates = []
-    for date in dates:
+# Extracting reading and due dates
+def extract_dates(extracted_text):
+    date_regex = r"(?i)(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
+    dates = re.findall(date_regex, extracted_text)
+    parsed_dates = []
+    for date_str in dates:
         try:
-            formatted_date = datetime.strptime(date, "%d-%b-%Y")
-            formatted_dates.append(formatted_date)
+            parsed_date = datetime.strptime(date_str, "%d/%m/%Y")
         except ValueError:
-            continue
-    sorted_dates = sorted(formatted_dates)
-    sorted_dates_str = [date.strftime("%d-%m-%Y") for date in sorted_dates]
-    return sorted_dates_str
+            try:
+                parsed_date = datetime.strptime(date_str, "%m/%d/%Y")
+            except ValueError:
+                continue
+        parsed_dates.append(parsed_date)
+    
+    if parsed_dates:
+        parsed_dates.sort()
+        reading_date = parsed_dates[0].strftime("%d/%m/%Y")
+        due_date = parsed_dates[-1].strftime("%d/%m/%Y")
+    else:
+        reading_date = "Reading Date not found"
+        due_date = "Due Date not found"
+    
+    return reading_date, due_date
 
 
-def extract_phone(input):
-    regex = r"Mobile No\.\s*:\s*(\d+)"
-    match = re.search(regex, input)
-    phone = match.group(1).strip() if match else ""
-    return phone
 
 
-def extract_address(input):
-    regex = r"Address\s*:\s*(.*?)(?=\s*[A-Z][a-zA-Z\s]*:|$)"
-    match = re.search(regex, input, re.DOTALL | re.IGNORECASE)
-    address = match.group(1).strip() if match else ""
-    return address
 
 
-def extract_mr_code(input):
-    regex = r"Zone/MR\s*Code:\s*([A-Z0-9/]+\s*[A-Z0-9/]*)"
-    match = re.search(regex, input, re.IGNORECASE)
-    mr_code = match.group(1).strip() if match else ""
-    return mr_code
-
-
-def extract_area_code(input):
-    regex = r"Area Code\s*:\s*([\w/-]+)"
-    match = re.search(regex, input, re.IGNORECASE)
-    area_code = match.group(1).strip() if match else ""
-    return area_code
-
-
-def extract_bill_number(input):
-    regex = r"Bill No\.\s*(?::\s*)?(\d+)"
-    match = re.search(regex, input)
-    bill_number = match.group(1).strip() if match else ""
-    return bill_number
-
-
-def extract_govt_body(input):
-    regex = r"Delhi Jal Board"
-    match = re.search(regex, input, re.IGNORECASE)
-    govt_body = match.group(0).strip() if match else "Unknown"
-    return govt_body
-
-
-def extract_bill_date(input):
-    regex = r"Bill Date\s*:? (\d{2}-[A-Z]{3}-\d{4})"
-    match = re.search(regex, input, re.IGNORECASE)
-    bill_date = match.group(1).strip() if match else ""
-    return bill_date
-
-
-def extract_bill_due_date(input):
-    regex = r"Bill Due Date\s*:? (\d{2}-[A-Z]{3}-\d{4})"
-    match = re.search(regex, input, re.IGNORECASE)
-    bill_due_date = match.group(1).strip() if match else ""
-    return bill_due_date
-
-
-def extract_water_bill_details(image_path):
-    """Extracts water bill details from an image using OCR and regular expressions.
-
-    This function performs the following steps:
-
-    1. Opens the image using Pillow.
-    2. Extracts text using Tesseract (assuming the text is in a supported language).
-    3. Extracts various water bill details using specific regular expressions.
-
-    Args:
-        image_path (str): The path to the water bill image.
-
-    Returns:
-        dict: A dictionary containing extracted water bill information
-              (e.g., "Name", "Bill Amount", "Bill Date", etc.).
-    """
-    image = Image.open(image_path)
-    extracted_text = pytesseract.image_to_string(image)
-
-    name = extract_name(extracted_text)
-    dates = extract_all_dates(extracted_text)
-    bill_date = extract_bill_date(extracted_text)
-    due_date = extract_bill_due_date(extracted_text)
-    address = extract_address(extracted_text)
-    phone = extract_phone(extracted_text)
-    bill_amount = extract_bill_amount(extracted_text)
-    mr_code = extract_mr_code(extracted_text)
-    area_code = extract_area_code(extracted_text)
-    meter_number = extract_meter_number(extracted_text)
-    bill_number = extract_bill_number(extracted_text)
-    govt_body = extract_govt_body(extracted_text)
-
-    return {
-        "Name": name,
-        "Phone Number": phone,
-        "Bill Amount": bill_amount,
-        "Bill Date": bill_date,
-        "Due Date": due_date,
-        "Address": address,
-        "Zone/MR Code": mr_code,
-        "Area Code": area_code,
-        "Meter Number": meter_number,
-        "Bill Number": bill_number,
-        "Source/Govt Body Name": govt_body,
-    }
-
-
-def water_bill(image_path):
-    """Extracts water bill details from an image.
-
-    This function is a wrapper for `extract_water_bill_details`.
-
-    Args:
-        image_path (str): The path to the water bill image.
-
-    Returns:
-        dict: A dictionary containing extracted water bill information.
-    """
-    return extract_water_bill_details(image_path)

@@ -1,6 +1,7 @@
 import cv2
 import pytesseract
 import re
+import numpy as np
 from pytesseract import Output
 
 
@@ -95,17 +96,27 @@ def check_image_quality(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
-    sharpness_threshold = 150.0
 
     mean_brightness = image.mean()
-    brightness_threshold = 150.0
+    
+    return variance_of_laplacian > 50 and mean_brightness > 50
 
-    if (
-        variance_of_laplacian < sharpness_threshold
-        or mean_brightness < brightness_threshold
-    ):
-        return False
-    return True
+def preprocess_image(image_path):
+    gray = cv2.cvtColor(image_path, cv2.COLOR_BGR2GRAY)
+
+    gray = cv2.equalizeHist(gray)
+
+    kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+
+    processed = cv2.dilate(gray, kernal, iterations=1)
+
+    processed = cv2.erode(processed, kernal, iterations=1)
+
+    sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]) 
+
+    sharpened = cv2.filter2D(processed, -1, sharpen_kernel)
+
+    return sharpened
 
 
 def parse_degree_certificate(image_path):
@@ -159,5 +170,5 @@ def degree(image_path):
 
 
 parse_degree_certificate(
-    "/home/rishabh/openbharatocr/openbharatocr/ocr/degree_sample/batch_2/6.jpeg"
+    "path/to/degree_certificate.jpeg"
 )

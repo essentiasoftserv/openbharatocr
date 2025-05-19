@@ -98,8 +98,9 @@ def check_image_quality(image_path):
     variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
 
     mean_brightness = image.mean()
-    
+
     return variance_of_laplacian > 50 and mean_brightness > 50
+
 
 def preprocess_image(image_path):
     gray = cv2.cvtColor(image_path, cv2.COLOR_BGR2GRAY)
@@ -112,7 +113,7 @@ def preprocess_image(image_path):
 
     processed = cv2.erode(processed, kernal, iterations=1)
 
-    sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]) 
+    sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
 
     sharpened = cv2.filter2D(processed, -1, sharpen_kernel)
 
@@ -169,6 +170,4 @@ def degree(image_path):
     return parse_degree_certificate(image_path)
 
 
-parse_degree_certificate(
-    "path/to/degree_certificate.jpeg"
-)
+parse_degree_certificate("path/to/degree_certificate.jpeg")

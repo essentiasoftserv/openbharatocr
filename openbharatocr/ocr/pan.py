@@ -1,231 +1,162 @@
 import re
-import pytesseract
 import imghdr
+import pytesseract
 from PIL import Image
 import cv2
 import numpy as np
 
 
-def clean_input(match):
-    """
-    Cleans the extracted text by splitting lines and removing stopwords.
-
-    Args:
-        match (list): A list of extracted text chunks.
-
-    Returns:
-        list: A cleaned list of individual names.
-    """
-    cleaned = []
-
-    for name in match:
-        split_name = name.split("\n")
-        for chunk in split_name:
-            cleaned.append(chunk)
-
-    stopwords = ["INDIA", "OF", "TAX", "GOVT", "DEPARTMENT", "INCOME"]
-
-    names = [
-        name.strip()
-        for name in cleaned
-        if not any(word in name for word in stopwords) and len(name.strip()) > 3
-    ]
-
-    return names
+def sharpen_image(image):
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    return cv2.filter2D(src=image, ddepth=-1, kernel=kernel)
 
 
-def extract_all_names(input):
-    """
-    Extracts all names from the given text using a regular expression and performs basic cleaning.
+def binarize_otsu(gray_image):
+    _, binary = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return cv2.bitwise_not(binary)
 
-    Args:
-        input (str): The text to extract names from.
 
-    Returns:
-        list: A list of extracted names.
-    """
-    regex = r"\n[A-Z\s]+\b"
-    match = re.findall(regex, input)
-
-    names = []
-    cleaned = clean_input(match)
+def enhanced_preprocess(image_path):
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    sharpened = sharpen_image(gray)
+    binary = binarize_otsu(sharpened)
+    kernel = np.ones((1, 1), np.uint8)
+    cleaned = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
     return cleaned
 
 
-def extract_pan(input):
-    """
-    Extracts the PAN number from the given text using a regular expression.
-
-    Args:
-        input (str): The text to extract the PAN number from.
-
-    Returns:
-        str: The extracted PAN number, or an empty string if not found.
-    """
-    regex = r"[A-Z]{5}[0-9]{4}[A-Z]"
-    match = re.search(regex, input)
-    pan_number = match.group(0) if match else ""
-
-    return pan_number
+def get_text_from_image(image):
+    custom_config = r"--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./- "
+    return pytesseract.image_to_string(image, config=custom_config)
 
 
-def extract_dob(input):
-    """
-    Extracts the date of birth from the given text using a regular expression.
+def get_text_with_confidence(image):
+    custom_config = r"--oem 3 --psm 6"
+    data = pytesseract.image_to_data(
+        image, config=custom_config, output_type=pytesseract.Output.DICT
+    )
+    texts = [
+        data["text"][i] for i in range(len(data["text"])) if int(data["conf"][i]) > 60
+    ]
+    return " ".join(texts)
 
-    Args:
-        input (str): The text to extract the date of birth from.
 
-    Returns:
-        str: The extracted date of birth in a common format (DD/MM/YYYY), or an empty string if not found.
-    """
-    regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
-    match = re.search(regex, input)
-    dob = match.group(0) if match else ""
+def get_text_from_image(image):
+    config = r"--oem 3 --psm 4 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/:- "
+    return pytesseract.image_to_string(image, config=config)
 
-    return dob
+
+def get_text_with_confidence(image):
+    config = r"--oem 3 --psm 4"
+    data = pytesseract.image_to_data(
+        image, config=config, output_type=pytesseract.Output.DICT
+    )
+    texts = [
+        data["text"][i] for i in range(len(data["text"])) if int(data["conf"][i]) > 60
+    ]
+    return " ".join(texts)
+
+
+def extract_pan(input_text):
+    regex = r"\b([A-Z]{5}[0-9]{4}[A-Z])\b"
+    match = re.search(regex, input_text)
+    return match.group(1) if match else ""
+
+
+def extract_dob(text):
+    dob_regex = re.compile(
+        r"\b(0[1-9]|[12][0-9]|3[01])[/\-.](0[1-9]|1[0-2])[/\-.](19|20)\d{2}\b"
+    )
+    match = dob_regex.search(text)
+    if match:
+        return match.group(0)
+    else:
+        return ""
+
+
+def clean_input(lines):
+    stopwords = [
+        "INDIA",
+        "OF",
+        "TAX",
+        "GOVT",
+        "DEPARTMENT",
+        "INCOME",
+        "CARD",
+        "PERMANENT",
+        "ACCOUNT",
+    ]
+    cleaned_names = []
+    for name in lines:
+        name = name.strip()
+        if not any(word in name.upper() for word in stopwords) and len(name) > 3:
+            cleaned_names.append(name)
+    return cleaned_names
+
+
+def extract_full_name(text):
+    lines = text.splitlines()
+    full_name = ""
+    full_name_pattern = re.compile(r"(?:Name|Na?me|Ta?Name|Na?ta/?Name)", re.IGNORECASE)
+
+    for i, line in enumerate(lines):
+        if full_name_pattern.search(line):
+            for j in range(i + 1, min(i + 4, len(lines))):
+                candidate = lines[j].strip()
+                if candidate and re.match(r"^[A-Z\s]+$", candidate):
+                    full_name = candidate.strip()
+                    return full_name
+    return full_name
+
+
+def extract_parent_name(text):
+    lines = text.splitlines()
+    parent_name = ""
+    parent_name_pattern = re.compile(r"(Father|Parents|Dad|FathersName)", re.IGNORECASE)
+
+    for i, line in enumerate(lines):
+        if parent_name_pattern.search(line):
+            for j in range(i + 1, min(i + 4, len(lines))):
+                candidate = lines[j].strip()
+                if candidate and re.match(r"^[A-Z\s]+$", candidate):
+                    parent_name = candidate.strip()
+                    return parent_name
+    return parent_name
 
 
 def extract_pan_details(image_path):
-    """
-    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image.
-
-    This version attempts extraction from the original image and a converted JPEG version
-    to improve compatibility.
-
-    Args:
-        image_path (str): The path to the PAN card image.
-
-    Returns:
-        dict: A dictionary containing extracted PAN details.
-    """
     image = Image.open(image_path)
-    extracted_text = pytesseract.image_to_string(image)
-
     format = imghdr.what(image_path)
     if format != "jpeg":
-        image.save("image.jpg", "JPEG")
+        image.save("temp_image.jpg", "JPEG")
+        image = Image.open("temp_image.jpg")
 
-        converted_image = Image.open("image.jpg")
-        converted_image_text = pytesseract.image_to_string(converted_image)
-
-        extracted_text += converted_image_text
-
-    names = extract_all_names(extracted_text)
-    full_name = names[0] if len(names) > 0 else ""
-    parents_name = names[1] if len(names) > 1 else ""
-    dob = extract_dob(extracted_text)
-    pan_number = extract_pan(extracted_text)
+    extracted_text = get_text_from_image(image)
 
     return {
-        "Full Name": full_name,
-        "Parent's Name": parents_name,
-        "Date of Birth": dob,
-        "PAN Number": pan_number,
+        "Full Name": extract_full_name(extracted_text),
+        "Parent's Name": extract_parent_name(extracted_text),
+        "Date of Birth": extract_dob(extracted_text),
+        "PAN Number": extract_pan(extracted_text),
     }
 
 
-def preprocess_for_sketch(image_path):
-    """
-    Preprocesses an image to convert it into a black and white sketch-like look
-    for improved text extraction.
-
-    This function performs several image processing steps:
-
-    1. Reads the image using OpenCV.
-    2. Converts the image to grayscale.
-    3. Applies Gaussian blur to smooth the image and reduce noise.
-    4. Applies adaptive thresholding to convert the image to binary (black and white).
-    5. Applies morphological operations (opening) to reduce noise and enhance text regions.
-    6. Inverts the image colors for better text recognition by Tesseract.
-
-    Args:
-        image_path (str): The path to the image.
-
-    Returns:
-        numpy.ndarray: The preprocessed image in a black and white sketch-like format.
-    """
-    # Read the image
-    image = cv2.imread(image_path)
-
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply GaussianBlur to smooth the image
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # Apply adaptive thresholding to binarize the image
-    binary = cv2.adaptiveThreshold(
-        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 9
-    )
-
-    # Apply morphological operations to reduce noise and enhance text regions
-    kernel = np.ones((1, 1), np.uint8)
-    opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
-
-    # Invert the colors of the image
-    inverted_image = cv2.bitwise_not(opened)
-
-    return inverted_image
-
-
 def extract_pan_details_version2(image_path):
-    """
-    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image
-    using a pre-processing step that converts the image to a sketch-like format.
-
-    This version aims to improve extraction accuracy in cases where Version 1 might struggle.
-
-    Args:
-        image_path (str): The path to the PAN card image.
-
-    Returns:
-        dict: A dictionary containing extracted PAN details.
-    """
-
-    # Preprocess the image to convert it into a black and white sketch-like look
-    preprocessed_image = preprocess_for_sketch(image_path)
-
-    # Perform text extraction using Tesseract on the preprocessed image
-    extracted_text = pytesseract.image_to_string(preprocessed_image)
-
-    # Extract information from the extracted text
-    names = extract_all_names(extracted_text)
-    full_name = names[0] if len(names) > 0 else ""
-    parents_name = names[1] if len(names) > 1 else ""
-    dob = extract_dob(extracted_text)
-    pan_number = extract_pan(extracted_text)
+    preprocessed_image = enhanced_preprocess(image_path)
+    extracted_text = get_text_with_confidence(preprocessed_image)
 
     return {
-        "Full Name": full_name,
-        "Parent's Name": parents_name,
-        "Date of Birth": dob,
-        "PAN Number": pan_number,
+        "Full Name": extract_full_name(extracted_text),
+        "Parent's Name": extract_parent_name(extracted_text),
+        "Date of Birth": extract_dob(extracted_text),
+        "PAN Number": extract_pan(extracted_text),
     }
 
 
 def pan(image_path):
-    """
-    Extracts PAN details (full name, parent's name, date of birth, PAN number) from a PAN card image.
-
-    This function attempts extraction using two versions:
-
-    1. Version 1: Extracts details from the original image and a converted JPEG version
-       to improve compatibility.
-    2. Version 2: If any details are missing from Version 1, it applies a pre-processing
-       step that converts the image to a sketch-like format and then extracts details.
-
-    Args:
-        image_path (str): The path to the PAN card image.
-
-    Returns:
-        dict: A dictionary containing extracted PAN details, with missing details from
-              Version 1 filled in by Version 2 if necessary.
-    """
-    # Run Version 1
     result = extract_pan_details(image_path)
 
-    # Check if all details are extracted
     if not all(
         [
             result["Full Name"],
@@ -234,12 +165,16 @@ def pan(image_path):
             result["PAN Number"],
         ]
     ):
-        # Run Version 2 if any detail is missing
         result_v2 = extract_pan_details_version2(image_path)
-        # Update the missing details with results from Version 2
         result["Full Name"] = result["Full Name"] or result_v2["Full Name"]
         result["Parent's Name"] = result["Parent's Name"] or result_v2["Parent's Name"]
         result["Date of Birth"] = result["Date of Birth"] or result_v2["Date of Birth"]
         result["PAN Number"] = result["PAN Number"] or result_v2["PAN Number"]
 
     return result
+
+
+if __name__ == "__main__":
+    image_path = "/home/rishabh/openbharatocr/openbharatocr/ocr/PAN1.jpeg"
+    pan_details = pan(image_path)
+    print(pan_details)

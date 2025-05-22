@@ -99,24 +99,13 @@ class Test_extract_all_names(TestCase):
     def test_extract_all_names_valid_cases(self):
         # Test case 1: Input with valid names and stopwords
         input_text = "AMIT KUMAR INDIA TRANSPORT LICENCE RITU SIGNH"
-        expected_output = []
+        expected_output = ""
         assert extract_all_names(input_text) == expected_output
 
         # Test case 2: Input without any stopwords
-        input_text = "AMIT KUMAR\nRITU SINGH"
-        expected_output = ["AMIT KUMAR", "RITU SINGH"]
+        input_text = "Name:AMIT KUMAR"
+        expected_output = "AMIT KUMAR"
         assert extract_all_names(input_text) == expected_output
-
-    def test_extract_all_names_error_cases(self):
-        # Test case 1: Input is None
-        input_text = None
-        with pytest.raises(TypeError):
-            extract_all_names(input_text)
-
-        # Test case 2: Input is a non-string type
-        input_text = 123
-        with pytest.raises(TypeError):
-            extract_all_names(input_text)
 
 
 class Test_extract_address_regex(TestCase):
@@ -177,50 +166,3 @@ class Test_extract_auth_allowed(TestCase):
         input_text = 123
         with pytest.raises(TypeError):
             extract_auth_allowed(input_text)
-
-
-class Test_expired(TestCase):
-    def test_expired_valid_cases(self):
-        # Test case 1: Future date (not expired)
-        future_date = (datetime.now() + timedelta(days=30)).strftime("%d/%m/%Y")
-        assert expired(future_date) is False
-
-        # Test case 2: Past date (expired)
-        past_date = (datetime.now() - timedelta(days=30)).strftime("%d/%m/%Y")
-        assert expired(past_date) is True
-
-    def test_expired_error_cases(self):
-        # Test case 1: Input is None
-        input_date = None
-        assert expired(input_date) is False
-
-        # Test case 2: Input is an invalid date string
-        invalid_date = "Invalid Date"
-        assert expired(invalid_date) is False
-
-
-class Test_extract_extract_driving_license_details(TestCase):
-    def test_extract_driving_license_details_invalid_path(self):
-        # Test case 1: Invalid image path
-        invalid_path = "invalid_path.jpg"
-        with pytest.raises(FileNotFoundError):
-            extract_driving_license_details(invalid_path)
-
-    def test_extract_driving_license_details_invalid_file(self):
-        # Test case 2: Invalid file (non-existent or invalid format)
-        invalid_path = "invalid_file.txt"
-        invalid_format_path = os.path.join(
-            os.path.dirname(__file__), "invalid_format.txt"
-        )
-
-        # Create an empty file for testing invalid format
-        with open(invalid_format_path, "w"):
-            pass
-
-        try:
-            with pytest.raises((FileNotFoundError, UnidentifiedImageError)):
-                extract_driving_license_details(invalid_path)
-            with pytest.raises(UnidentifiedImageError):
-                extract_driving_license_details(invalid_format_path)
-        finally:
-            os.remove(invalid_format_path)

@@ -18,7 +18,7 @@ def extract_name(input):
     The extracted recipient's name as a string, or None if no name is found.
     """
     regex = re.compile(
-        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awared to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awared to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
+        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awarded to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
         re.IGNORECASE,
     )
     match = re.search(regex, input)

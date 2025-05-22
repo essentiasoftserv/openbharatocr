@@ -1,4 +1,4 @@
-import CV2
+import cv2
 import pytesseract
 import re
 import numpy as np

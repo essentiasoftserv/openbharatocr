@@ -175,6 +175,6 @@ def pan(image_path):
 
 
 if __name__ == "__main__":
-    image_path = "/home/rishabh/openbharatocr/openbharatocr/ocr/PAN1.jpeg"
+    image_path = "path_to_your_image.jpg"
     pan_details = pan(image_path)
     print(pan_details)

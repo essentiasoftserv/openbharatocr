@@ -78,7 +78,7 @@ def extract_issue_dates(input_text):
     return []
 
 def extract_valid_till_dates(input_text):
-    valid_keywords = ["valid till", "valid upto", "valid up to", "Validity", "valid until", "valid to"]
+    valid_keywords = ["Validity", "valid till", "valid upto", "valid up to", "valid until", "valid to"]
     lines = input_text.lower().splitlines()
 
     for line in lines:

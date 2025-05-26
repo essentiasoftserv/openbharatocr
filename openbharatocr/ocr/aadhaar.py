@@ -1,340 +1,205 @@
-import re
 import cv2
 import pytesseract
 from PIL import Image
-import tempfile
-import uuid
-import imghdr
+import re
 import numpy as np
-import io
 
 
-def preprocess_to_processed(image_path):
-    """
-    Preprocesses an image to convert it into a high-contrast black and white format
-    for improved text extraction.
-
-    Args:
-        image_path (str): The path to the input image.
-
-    Returns:
-        numpy.ndarray: The preprocessed image in a black and white format.
-    """
-    # Read the image
+def preprocess_image_light(image_path):
     image = cv2.imread(image_path)
-
-    # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     gray = clahe.apply(gray)
-
-    # Apply GaussianBlur to smooth the image and reduce noise
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # Apply adaptive thresholding to convert the image to binary (black and white)
-    binary = cv2.adaptiveThreshold(
-        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 10
-    )
-
-    # Invert the colors of the image
-    inverted_image = cv2.bitwise_not(binary)
-
-    # Apply dilation and erosion to make the text bolder and cleaner
-    kernel = np.ones((2, 2), np.uint8)
-    dilated = cv2.dilate(inverted_image, kernel, iterations=1)
-    eroded = cv2.erode(dilated, kernel, iterations=1)
-
-    # Sharpen the image using a kernel
-    sharpen_kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened_image = cv2.filter2D(eroded, -1, sharpen_kernel)
-
-    return sharpened_image
+    return gray
 
 
-def extract_name(input_text):
-    """
-    Extracts the full name from the given text using a regular expression.
-
-    Args:
-        input_text (str): The text to extract the name from.
-
-    Returns:
-        str: The extracted full name, or an empty string if no name is found.
-    """
-    name_regex = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
-    names = re.findall(name_regex, input_text)
-    full_name = ""
-    for name in names:
-        if "Government" not in name and "India" not in name:
-            full_name = name
-            break
-    return full_name
+def crop_back_top_left_area(image):
+    h, w = image.shape[:2]
+    x_start, y_start = 0, 0
+    x_end = int(w * 0.6)
+    y_end = int(h * 0.5)
+    return image[y_start:y_end, x_start:x_end]
 
 
-def extract_fathers_name(input_text):
-    """
-    Extracts the father's name from the given text using a regular expression.
+def ocr_image_with_config(image, config="--psm 6"):
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+    text = pytesseract.image_to_string(image, config=config)
+    print("----- OCR TEXT START -----")
+    print(text)
+    print("------ OCR TEXT END ------\n")
+    return text
 
-    Args:
-        input_text (str): The text to extract the father's name from.
 
-    Returns:
-        str: The extracted father's name, or an empty string if not found.
-    """
-    regex = r"(?:S.?O|D.?O)[:\s]*([A-Za-z]+(?: [A-Za-z]+)*)"
-    match = re.findall(regex, input_text)
-    fathers_name = ""
+def extract_name(text):
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    garbage_keywords = ['Government', 'Of', 'India', 'Unique', 'Identification', 'Authority', 'DOB', 'Gender']
+
+    for line in lines:
+        if (re.match(r'^[A-Za-z\s]+$', line) and
+            len(line.split()) >= 2 and
+            not any(word in line for word in garbage_keywords) and
+            len(line) <= 40):
+            return line
+    return ""
+
+
+def extract_dob(text):
+    match = re.search(r'(?:DOB|Date of Birth|D\.O\.B|D O B|D\.O\.B\.)[:\s]*([0-9]{2}/[0-9]{2}/[0-9]{4})', text, re.I)
     if match:
-        fathers_name = match[-1]
-    return fathers_name
+        return match.group(1)
+    match = re.search(r'([0-9]{2}/[0-9]{2}/[0-9]{4})', text)
+    if match:
+        return match.group(1)
+    return ""
 
 
-def extract_aadhaar(input_text):
-    """
-    Extracts the Aadhaar number from the given text using a regular expression.
-
-    Args:
-        input_text (str): The text to extract the Aadhaar number from.
-
-    Returns:
-        str: The extracted Aadhaar number, or an empty string if not found.
-    """
-    regex = r"\b\d{4}\s?\d{4}\s?\d{4}\b"
-    match = re.search(regex, input_text)
-    aadhaar_number = match.group(0) if match else ""
-    return aadhaar_number
+def extract_gender(text):
+    match = re.search(r'\b(Male|Female|Transgender)\b', text, re.I)
+    if match:
+        return match.group(1).capitalize()
+    return ""
 
 
-def extract_dob(input_text):
-    """
-    Extracts the date of birth from the given text using a regular expression.
-
-    Args:
-        input_text (str): The text to extract the date of birth from.
-
-    Returns:
-        str: The extracted date of birth in DD/MM/YYYY format, or an empty string if not found.
-    """
-    regex = r"\b(\d{2}/\d{2}/\d{4})\b"
-    match = re.search(regex, input_text)
-    dob = match.group(0) if match else ""
-    return dob
+def extract_aadhaar_number(text):
+    text = text.replace('\n', ' ')
+    match = re.search(r'(\d{4}\s*\d{4}\s*\d{4})', text)
+    if match:
+        return match.group(1).replace(" ", "")
+    match = re.search(r'\b(\d{12})\b', text)
+    if match:
+        return match.group(1)
+    return ""
 
 
-def extract_yob(input_text):
-    """
-    Extracts the year of birth from the given text using a regular expression.
+def extract_fathers_name_and_address(text):
+    father_name = ""
+    address = ""
 
-    Used as a fallback if the date of birth is not found in DD/MM/YYYY format.
+    # Clean OCR noise
+    text = text.replace("S/ o", "S/o").replace("S/ O", "S/o").replace("s/ o", "s/o")
 
-    Args:
-        input_text (str): The text to extract the year of birth from.
+    # Extract father's name using stronger match
+    match = re.search(r'(?:S/o|S/O|Son of|W/o|D/o|W/O|D/O)[:\s]*([A-Z][a-zA-Z\s]{3,40})', text, re.I)
+    if match:
+        fn_candidate = match.group(1).strip()
+        if len(fn_candidate.split()) >= 2:
+            father_name = fn_candidate
 
-    Returns:
-        str: The extracted year of birth in YYYY format, or an empty string if not found.
-    """
-    regex = r"\b\d{4}\b"
-    match = re.search(regex, input_text)
-    yob = match.group(0) if match else ""
-    return yob
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    garbage_patterns = [
+        r'mera\s+aadhaar', r'www\.', r'uidai', r'https?://', r'email', r'@', r'contact\s+us'
+    ]
+    address_lines = []
+    addr_start = False
 
+    for line in lines:
+        line_lower = line.lower()
+        if father_name and father_name in line:
+            addr_start = True
+            continue
+        if 'address' in line_lower:
+            addr_start = True
+            continue
 
-def extract_gender(input_text):
-    """
-    Extracts the gender from the given text using string comparisons.
+        if addr_start:
+            if any(re.search(p, line_lower) for p in garbage_patterns):
+                continue
+            if re.match(r'^\d{4}\s*\d{4}\s*\d{4}$', line.replace(" ", "")):
+                continue
+            if len(re.findall(r'[A-Za-z]', line)) < max(3, len(line) * 0.5):
+                continue
+            address_lines.append(line)
+            if re.search(r'\b\d{6}\b', line):  # Indian PIN code
+                break
 
-    Args:
-        input_text (str): The text to extract the gender from.
+    address = ', '.join(address_lines).strip()
 
-    Returns:
-        str: "Female", "Male", or "Other" based on the extracted information.
-    """
-    if re.search("Female", input_text) or re.search("FEMALE", input_text):
-        return "Female"
-    if re.search("Male", input_text) or re.search("MALE", input_text):
-        return "Male"
-    return "Other"
+    # fallback if no good address
+    if not address:
+        fallback_lines = [l for l in lines if re.search(r'\d', l) or re.search(r'(village|city|state|pin|postcode|district|town)', l, re.I)]
+        address = ', '.join(fallback_lines).strip()
 
-
-def extract_address(input_text):
-    """
-    Extracts the address from the given text using a regular expression.
-
-    Args:
-        input_text (str): The text to extract the address from.
-
-    Returns:
-        str: The extracted address, or an empty string if not found.
-    """
-    regex = r"Address:\s*((?:.|\n)*?\d{6})"
-    match = re.search(regex, input_text)
-    address = match.group(1) if match else ""
-    return address
-
-
-def extract_back_aadhaar_details(image_path):
-    """
-    Extracts details from the back side of an Aadhaar card image.
-
-    Uses Tesseract OCR to convert the image to text and then extracts relevant information
-    using regular expressions.
-
-    Args:
-        image_path (str): The path to the image file of the Aadhaar card back side.
-
-    Returns:
-        dict: A dictionary containing the extracted details, including:
-            - Father's Name (str)
-            - Address (str)
-    """
-    image = Image.open(image_path)
-    extracted_text = pytesseract.image_to_string(image)
-    fathers_name = extract_fathers_name(extracted_text)
-    address = extract_address(extracted_text)
-    return {
-        "Father's Name": fathers_name,
-        "Address": address,
-    }
+    return father_name, address
 
 
 def extract_front_aadhaar_details(image_path):
-    """
-    Extracts details from the front side of an Aadhaar card image.
-
-    Uses Tesseract OCR to convert the image to text and then extracts relevant information
-    using regular expressions.
-
-    Args:
-        image_path (str): The path to the image file of the Aadhaar card front side.
-
-    Returns:
-        dict: A dictionary containing the extracted details, including:
-            - Full Name (str)
-            - Date/Year of Birth (str)
-            - Gender (str)
-            - Aadhaar Number (str)
-    """
-    image = Image.open(image_path)
-    extracted_text = pytesseract.image_to_string(image)
-    full_name = extract_name(extracted_text)
-    dob = extract_dob(extracted_text)
-    gender = extract_gender(extracted_text)
-    aadhaar_number = extract_aadhaar(extracted_text)
-    if dob == "":
-        dob = extract_yob(extracted_text)
+    print(f"Processing front image: {image_path}")
+    image = cv2.imread(image_path)
+    text = ocr_image_with_config(image)
     return {
-        "Full Name": full_name,
-        "Date/Year of Birth": dob,
-        "Gender": gender,
-        "Aadhaar Number": aadhaar_number,
+        "Full Name": extract_name(text),
+        "Date of Birth": extract_dob(text),
+        "Gender": extract_gender(text),
+        "Aadhaar Number": extract_aadhaar_number(text)
     }
 
 
-def extract_front_aadhaar_details_version2(image_path):
-    """
-    Extracts details from the front side of an Aadhaar card image
-    using a pre-processing step that converts the image to a sketch-like format.
-
-    This version aims to improve extraction accuracy in cases where Version 1 might struggle.
-
-    Args:
-        image_path (str): The path to the front Aadhaar card image.
-
-    Returns:
-        dict: A dictionary containing extracted front Aadhaar Details details.
-    """
-    preprocessed_image = preprocess_to_processed(image_path)
-    _, preprocessed_image_encoded = cv2.imencode(".jpg", preprocessed_image)
-    image_pil = Image.open(io.BytesIO(preprocessed_image_encoded.tobytes()))
-    extracted_text = pytesseract.image_to_string(image_pil)
-    full_name = extract_name(extracted_text)
-    dob = extract_dob(extracted_text)
-    gender = extract_gender(extracted_text)
-    aadhaar_number = extract_aadhaar(extracted_text)
-    if dob == "":
-        dob = extract_yob(extracted_text)
+def extract_front_aadhaar_details_preprocessed(image_path):
+    print(f"Processing front image with preprocessing: {image_path}")
+    gray = preprocess_image_light(image_path)
+    text = ocr_image_with_config(gray)
     return {
-        "Full Name": full_name,
-        "Date/Year of Birth": dob,
-        "Gender": gender,
-        "Aadhaar Number": aadhaar_number,
+        "Full Name": extract_name(text),
+        "Date of Birth": extract_dob(text),
+        "Gender": extract_gender(text),
+        "Aadhaar Number": extract_aadhaar_number(text)
     }
 
 
-def extract_back_aadhaar_details_version2(image_path):
-    """
-    Extracts details from the back side of an Aadhaar card image
-    using a pre-processing step that converts the image to a sketch-like format.
-
-    This version aims to improve extraction accuracy in cases where Version 1 might struggle.
-
-    Args:
-        image_path (str): The path to the back Aadhaar card image.
-
-    Returns:
-        dict: A dictionary containing extracted back Aadhaar Details details.
-    """
-    preprocessed_image = preprocess_to_processed(image_path)
-    _, preprocessed_image_encoded = cv2.imencode(".jpg", preprocessed_image)
-    image_pil = Image.open(io.BytesIO(preprocessed_image_encoded.tobytes()))
-    extracted_text = pytesseract.image_to_string(image_pil)
-    fathers_name = extract_fathers_name(extracted_text)
-    address = extract_address(extracted_text)
-    return {
-        "Father's Name": fathers_name,
-        "Address": address,
-    }
+def extract_back_aadhaar_details(image_path):
+    print(f"Processing back image: {image_path}")
+    image = cv2.imread(image_path)
+    text = ocr_image_with_config(image)
+    return dict(zip(["Father's Name", "Address"], extract_fathers_name_and_address(text)))
 
 
-def validate_results(result1, result2):
-    """
-    This function matches both the versions and validates which version is more accurate and use info from that version.
-    """
-    validated_result = {}
-    for key in result1:
-        if result1[key] == result2[key]:
-            validated_result[key] = result1[key]
-        else:
-            # Use more reliable data or a default if both are incorrect
-            validated_result[key] = (
-                result1[key] if len(result1[key]) > len(result2[key]) else result2[key]
-            )
-    return validated_result
+def extract_back_aadhaar_details_preprocessed(image_path):
+    print(f"Processing back image with preprocessing: {image_path}")
+    gray = preprocess_image_light(image_path)
+    text = ocr_image_with_config(gray)
+    return dict(zip(["Father's Name", "Address"], extract_fathers_name_and_address(text)))
 
 
-def front_aadhaar(image_path):
-    """
-    Extracts details from the front side of an Aadhaar card image.
-
-    Calls the `extract_front_aadhaar_details` function to perform the extraction.
-
-    Args:
-        image_path (str): The path to the image file of the Aadhaar card front side.
-
-    Returns:
-        dict: A dictionary containing the extracted details from the front side.
-    """
-    result_v1 = extract_front_aadhaar_details(image_path)
-    result_v2 = extract_front_aadhaar_details_version2(image_path)
-    final_result = validate_results(result_v1, result_v2)
-    return final_result
+def extract_back_aadhaar_details_roi(image_path):
+    print(f"Processing back image with top-left ROI cropping: {image_path}")
+    image = cv2.imread(image_path)
+    gray = preprocess_image_light(image_path)
+    cropped = crop_back_top_left_area(gray)
+    text = ocr_image_with_config(cropped)
+    return dict(zip(["Father's Name", "Address"], extract_fathers_name_and_address(text)))
 
 
-def back_aadhaar(image_path):
-    """
-    Extracts details from the back side of an Aadhaar card image.
+def merge_results(res1, res2):
+    merged = {}
+    for key in res1.keys():
+        v1 = res1.get(key, "")
+        v2 = res2.get(key, "")
+        merged[key] = v1 if len(v1) >= len(v2) else v2
+    return merged
 
-    Calls the `extract_back_aadhaar_details` function to perform the extraction.
 
-    Args:
-        image_path (str): The path to the image file of the Aadhaar card back side.
+def extract_full_aadhaar_with_roi(front_image_path, back_image_path):
+    front1 = extract_front_aadhaar_details(front_image_path)
+    front2 = extract_front_aadhaar_details_preprocessed(front_image_path)
+    front = merge_results(front1, front2)
 
-    Returns:
-        dict: A dictionary containing the extracted details from the back side.
-    """
-    result_v1 = extract_back_aadhaar_details(image_path)
-    result_v2 = extract_back_aadhaar_details_version2(image_path)
-    final_result = validate_results(result_v1, result_v2)
-    return final_result
+    back1 = extract_back_aadhaar_details(back_image_path)
+    back2 = extract_back_aadhaar_details_preprocessed(back_image_path)
+    back3 = extract_back_aadhaar_details_roi(back_image_path)
+    back = {}
+    for k in back1:
+        candidates = [back1.get(k, ""), back2.get(k, ""), back3.get(k, "")]
+        back[k] = max(candidates, key=len)
+
+    return {**front, **back}
+
+
+if __name__ == "__main__":
+    front_img_path = "path/to/front/aadhaar.jpg"
+    back_img_path = "path/to/back/aadhaar.jpg"
+
+    data = extract_full_aadhaar_with_roi(front_img_path, back_img_path)
+    print("\nFinal Extracted Aadhaar Details:")
+    for k, v in data.items():
+        print(f"{k}: {v if v else 'Not Found'}")

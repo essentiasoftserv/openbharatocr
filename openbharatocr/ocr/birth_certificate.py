@@ -24,43 +24,46 @@ def clean_extracted_text(text):
 
 
 def extract_name(text):
-    match = re.search(r'\bNAME\s+([A-Z. ]+)\s+SEX\b', text)
+    match = re.search(r"\bNAME\s+([A-Z. ]+)\s+SEX\b", text)
     if match:
         return match.group(1).strip()
     return ""
+
+
 def extract_address(text):
-    # Find "MAIN ROAD" and capture everything up to the first "INDIA"
-    pattern = r'(MAIN ROAD.*?INDIA)'
+    pattern = r"(MAIN ROAD.*?INDIA)"
     match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
     if match:
         address = match.group(1).strip()
-        # Clean up whitespace and fix spacing before dots
-        address = re.sub(r'\s+', ' ', address)
+        address = re.sub(r"\s+", " ", address)
         address = address.replace(" .", ".")
         return address
     else:
         return ""
 
+
 def extract_date_of_birth(text):
-    # Look for date near "DATE OF BIRTH"
-    match = re.search(r'DATE\s+OF\s+BIRTH\s+PLACE\s+OF\s+BIRTH\s+(\d{2})\s*(\d{2})\s*(\d{4})', text)
+    match = re.search(
+        r"DATE\s+OF\s+BIRTH\s+PLACE\s+OF\s+BIRTH\s+(\d{2})\s*(\d{2})\s*(\d{4})", text
+    )
     if match:
         return f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
     return ""
 
+
 def extract_date_of_issue(text):
-    # Looks for "DATE OF ISSUE" followed by a date (may be separated by spaces or dashes)
-    match = re.search(r'DATE\s+OF\s+ISSUE.*?(\d{2})[-\s]?(\d{2})[-\s]?(\d{4})', text)
+    match = re.search(r"DATE\s+OF\s+ISSUE.*?(\d{2})[-\s]?(\d{2})[-\s]?(\d{4})", text)
     return f"{match.group(1)}/{match.group(2)}/{match.group(3)}" if match else ""
 
+
 def extract_registration_no(text):
-    # Find pattern like "REGISTRATION NO; REGISTRATION DATE 1310/2007 01.08 2007"
-    match = re.search(r'REGISTRATION\s+NO[:;]?\s*REGISTRATION\s+DATE\s*(\d{3,}/\d{4})', text)
+    match = re.search(
+        r"REGISTRATION\s+NO[:;]?\s*REGISTRATION\s+DATE\s*(\d{3,}/\d{4})", text
+    )
     if match:
         return match.group(1).strip()
-    
-    # Fallback: look for first occurrence of NNNN/YYYY (at least 3 digits before slash, 4 digits after)
-    fallback_match = re.search(r'(\d{3,}/\d{4})', text)
+
+    fallback_match = re.search(r"(\d{3,}/\d{4})", text)
     return fallback_match.group(1).strip() if fallback_match else ""
 
 
@@ -69,7 +72,7 @@ def extract_birth_certificate_details(image_path):
     preprocessed = preprocess_for_bold_text(image_cv)
 
     pil_img = Image.fromarray(preprocessed)
-    custom_config = r'--oem 3 --psm 4'
+    custom_config = r"--oem 3 --psm 4"
     extracted_text = pytesseract.image_to_string(pil_img, config=custom_config)
 
     cleaned_text = clean_extracted_text(extracted_text)
@@ -90,7 +93,7 @@ def birth_certificate(image_path):
     return extract_birth_certificate_details(image_path)
 
 
-if __name__ == "__main__":  
-    image_path = "/home/rishabh/openbharatocr/openbharatocr/ocr/BC1.jpeg"
+if __name__ == "__main__":
+    image_path = "path/to/your/birth_certificate_image.jpg"
     details = birth_certificate(image_path)
     print(details)

@@ -7,7 +7,6 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
 
-# Preprocess the image to enhance bold text for OCR
 def preprocess_for_bold_text(image):
     """Preprocesses an image to enhance bold text for OCR.
 
@@ -31,7 +30,6 @@ def preprocess_for_bold_text(image):
     return sharpened
 
 
-# FuzzyWuzzy correction function
 def fuzzy_correct(text, possible_corrections):
     """Corrects text using fuzzy matching from possible corrections."""
     if not text:
@@ -40,7 +38,6 @@ def fuzzy_correct(text, possible_corrections):
     return best_match[0] if best_match and best_match[1] > 80 else text
 
 
-# Extracting the amount from the image (using various strategies)
 def extract_amount(extracted_text):
     amount_keywords = [
         "Total Amount Due",
@@ -74,7 +71,6 @@ def extract_amount(extracted_text):
     return max(valid_amounts) if valid_amounts else "Amount not found"
 
 
-# Extracting phone numbers
 def extract_phone_numbers(extracted_text):
     phone_regex = r"(?i)(?:phone|telephone|mobile|contact|tel|cell|no|number)\s*[:\-]?\s*(\+?\d{1,3}[-.\s]?)?(\(?\d{3,5}\)?[-.\s]?)?\d{3,5}[-.\s]?\d{4,7}"
     phone_numbers = re.findall(phone_regex, extracted_text)
@@ -82,7 +78,6 @@ def extract_phone_numbers(extracted_text):
     return phone_numbers if phone_numbers else ["Phone number not found"]
 
 
-# Extracting bill number using regex and fuzzy correction
 def extract_bill_number(extracted_text):
     bill_number_regex = r"(?i)(?:bill no\.?|bill number|bill id|invoice no\.?|soa #|transaction id)\s*[:\-]?\s*(\d{10,})"
     bill_match = re.search(bill_number_regex, extracted_text)
@@ -104,7 +99,6 @@ def extract_bill_number(extracted_text):
     )
 
 
-# Extracting account number using regex and fuzzy correction (updated regex for new format)
 def extract_account_number(extracted_text):
     account_keywords = [
         "Contract Account No",
@@ -116,7 +110,6 @@ def extract_account_number(extracted_text):
         "Seq No",
         "Seq No",
     ]
-    # Build a regex pattern that looks for these keywords
     account_number_regex = (
         r"(?i)(" + "|".join(account_keywords) + r")\s*[:\-]?\s*(\d{8,20})"
     )
@@ -128,7 +121,6 @@ def extract_account_number(extracted_text):
     )
 
 
-# Extracting meter number using regex and fuzzy correction (updated regex for new format)
 def extract_meter_number(extracted_text):
     meter_number_regex = (
         r"(?i)(?:meter\s*no\.?|meter\s*number|meter\s*id|mru\s*no)\s*[:\-]?\s*([\w\s]+)"
@@ -141,7 +133,6 @@ def extract_meter_number(extracted_text):
     )
 
 
-# Extracting ID number using regex and fuzzy correction
 def extract_id_number(extracted_text):
     id_number_regex = (
         r"(?i)(?:id no\.?|id number|tin|seq no)\s*[:\-]?\s*(\d{3}[-\d]{3,})"
@@ -154,7 +145,6 @@ def extract_id_number(extracted_text):
     )
 
 
-# Extracting area code
 def extract_area_code(extracted_text):
     area_code_regex = r"(?i)(?:area code|region code)\s*[:\-]?\s*(\d{3,5})"
     area_code_match = re.search(area_code_regex, extracted_text)
@@ -163,7 +153,6 @@ def extract_area_code(extracted_text):
     )
 
 
-# Extracting name from the image (customer, owner, etc.)
 def extract_name(extracted_text):
     name_regex = (
         r"(?i)(?:name|account name|consumer name|owner name)\s*[:\-]?\s*([A-Za-z\s]+)"
@@ -172,14 +161,12 @@ def extract_name(extracted_text):
     return name_match.group(1).strip() if name_match else "Name not found"
 
 
-# Extracting address from the image
 def extract_address(extracted_text):
     address_regex = r"(?i)(?:address)\s*[:\-]?\s*([^\n]+)"
     address_match = re.search(address_regex, extracted_text)
     return address_match.group(1).strip() if address_match else "Address not found"
 
 
-# Extracting reading and due dates
 def extract_dates(extracted_text):
     date_regex = r"(?i)(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
     dates = re.findall(date_regex, extracted_text)
@@ -203,3 +190,39 @@ def extract_dates(extracted_text):
         due_date = "Due Date not found"
 
     return reading_date, due_date
+
+def extract_water_bill_details(image_path):
+    image_cv = cv2.imread(image_path)
+    preprocessed = preprocess_for_bold_text(image_cv)
+    extracted_text = pytesseract.image_to_string(preprocessed, lang="eng")
+    print("Extracted Text:", extracted_text)
+
+    details = {
+        "Amount": extract_amount(extracted_text),
+        "Phone Numbers": extract_phone_numbers(extracted_text),
+        "Bill Number": extract_bill_number(extracted_text),
+        "Account Number": extract_account_number(extracted_text),
+        "Meter Number": extract_meter_number(extracted_text),
+        "ID Number": extract_id_number(extracted_text),
+        "Area Code": extract_area_code(extracted_text),
+        "Name": extract_name(extracted_text),
+        "Address": extract_address(extracted_text),
+        "Reading Date": "",
+        "Due Date": "",
+    }
+
+    reading_date, due_date = extract_dates(extracted_text)
+    details["Reading Date"] = reading_date
+    details["Due Date"] = due_date
+
+    return details
+
+def water_bill(image_path):
+    return extract_water_bill_details(image_path)
+
+
+if __name__ == "__main__":
+    image_path = "/home/rishabh/openbharatocr/openbharatocr/ocr/w1.jpeg"
+    water_bill_details = water_bill(image_path)
+    for key, value in water_bill_details.items():
+        print(f"{key}: {value}")

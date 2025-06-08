@@ -19,7 +19,9 @@ def preprocess_for_bold_text(image):
     blurred = cv2.GaussianBlur(denoised, (3, 3), 0)
     enhanced = cv2.addWeighted(blurred, 2.5, blurred, -1.0, 0)
     _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    sharpened = cv2.filter2D(binary, -1, np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]))
+    sharpened = cv2.filter2D(
+        binary, -1, np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    )
     return sharpened
 
 
@@ -38,7 +40,7 @@ def extract_voter_details_yolo(image_path):
         rgb.save(temp_path)
         img = cv2.imread(temp_path)
         height, width = img.shape[:2]
-        blob = cv2.dnn.blobFromImage(img, 1/255, (416, 416), swapRB=True, crop=False)
+        blob = cv2.dnn.blobFromImage(img, 1 / 255, (416, 416), swapRB=True, crop=False)
         net.setInput(blob)
         layer_outputs = net.forward(net.getUnconnectedOutLayersNames())
 
@@ -51,7 +53,9 @@ def extract_voter_details_yolo(image_path):
                 class_id = np.argmax(scores)
                 confidence = scores[class_id]
                 if confidence > 0.5:
-                    cx, cy, w, h = (detection[:4] * [width, height, width, height]).astype(int)
+                    cx, cy, w, h = (
+                        detection[:4] * [width, height, width, height]
+                    ).astype(int)
                     x, y = cx - w // 2, cy - h // 2
                     boxes.append([x, y, w, h])
                     confidences.append(float(confidence))
@@ -62,7 +66,7 @@ def extract_voter_details_yolo(image_path):
         for i in indices.flatten():
             x, y, w, h = boxes[i]
             x, y, w, h = max(0, x), max(0, y), min(w, width - x), min(h, height - y)
-            roi = img[y:y+h, x:x+w]
+            roi = img[y : y + h, x : x + w]
             if roi.size == 0:
                 continue
             label = classes[class_ids[i]]
@@ -109,7 +113,9 @@ def extract_date(text):
 
 
 def extract_address(text):
-    match = re.search(r"Address\s*[:\-]?\s*([A-Za-z0-9,\n\-\/\s]+[0-9]{6})", text, re.IGNORECASE)
+    match = re.search(
+        r"Address\s*[:\-]?\s*([A-Za-z0-9,\n\-\/\s]+[0-9]{6})", text, re.IGNORECASE
+    )
     return match.group(1).strip() if match else ""
 
 
@@ -162,6 +168,7 @@ def voter_id_front(image_path):
 
 def voter_id_back(image_path):
     return extract_voterid_details_back(image_path)
+
 
 if __name__ == "__main__":
     front_image_path = "path_to_front_image.jpg"

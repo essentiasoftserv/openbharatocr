@@ -348,7 +348,7 @@ class AadhaarOCR:
         if not relative_name:
             lines = [line.strip() for line in temp_text.split('\n') if line.strip()]
             for line in lines:
-                match = re.search(r'^([A-Z][a-zA-Z\s\.\-]{3,60})\s*[,.]?\s*(?:H\.NO\.|HOUSE|VILLAGE|DLF|APARTMENT|STREET|ROAD|SECTOR|PHASE)', line, re.I)
+                match = re.search(r'^([A-Z][a-zA-Z\s\.\-]{3,60})\s*[,.]?\s*(?:H\.NO\.|HOUSE|VILLAGE|APARTMENT|STREET|ROAD|SECTOR|PHASE)', line, re.I)
                 if match:
                     candidate_name = match.group(1).strip()
                     if (len(candidate_name.split()) >= 2 and
@@ -390,7 +390,7 @@ class AadhaarOCR:
             r'tel', r'mobile', r'uid', r'virtual\s+id'
         ]
         
-        address_start_keywords = [r'\baddress\b', r'\bपता\b', r'\bH\.NO\.\b', r'\bHOUSE\b', r'\bFLAT\b', r'\bVILLAGE\b', r'\bCOLONY\b', r'\bSTREET\b', r'\bROAD\b', r'\bSECTOR\b', r'\bDLF\b']
+        address_start_keywords = [r'\baddress\b', r'\bपता\b', r'\bH\.NO\.\b', r'\bHOUSE\b', r'\bFLAT\b', r'\bVILLAGE\b', r'\bCOLONY\b', r'\bSTREET\b', r'\bROAD\b', r'\bSECTOR\b']
 
         for line in lines_for_address:
             line_lower = line.lower()

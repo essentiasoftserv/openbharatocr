@@ -1,0 +1,68 @@
+version: 0.2
+
+env:
+  variables:
+    PYTHONPATH: "/codebuild/output/src"
+  parameter-store:
+    PYPI_API_TOKEN: /bharat-ocr/pypi-token
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.6b 
+    commands:
+      - echo "Installing system dependencies"
+      - python --version
+      - pip --version
+
+  pre_build:
+    commands:
+      - echo "Starting pre-build phase for Bharat OCR"
+      - echo "Installing Python dependencies"
+      - python -m pip install --upgrade pip
+      - pip install -r requirements.txt
+      - pip install pytest python-dateutil codespell black build
+
+  build:
+    commands:
+      - echo "Starting build phase - Running all checks"
+      
+      - echo "Running pytest tests"
+      - pytest .
+      
+      - echo "Running codespell check"
+      - codespell
+      
+      - echo "Running black formatting check"
+      - black . --check
+      
+      - echo "Note: Implement secret scanning using AWS tools or custom scripts"
+      
+      - echo "Building Python package"
+      - python -m build
+
+  post_build:
+    commands:
+      - echo "Starting post-build phase"
+      
+  post_build:
+    commands:
+      - echo "Starting post-build phase"
+      
+      - |
+        if [ "$CODEBUILD_WEBHOOK_HEAD_REF" = "refs/heads/main" ] || [ "$CODEBUILD_SOURCE_VERSION" = "main" ]; then
+          echo "Publishing to PyPI (main branch detected)"
+          pip install twine
+          python -m twine upload dist/* --username __token__ --password $PYPI_API_TOKEN
+        else
+          echo "Skipping PyPI publish (not main branch)"
+        fi
+
+artifacts:
+  files:
+    - 'dist/**/*'
+  name: 'bharat-ocr-package'
+
+cache:
+  paths:
+    - '/root/.cache/pip/**/*'

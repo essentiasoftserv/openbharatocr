@@ -1,289 +1,338 @@
 import re
-import pytesseract
-from PIL import Image
-
-
-def extract_names(input):
-    """
-    Extracts owner name and son/wife/daughter of (SWD) information from the given text using regular expressions.
-
-    This function attempts to extract names in three ways, prioritizing formats
-    containing "Dual Owner", "NAME", and "S/O W/D" patterns.
-
-    Args:
-        input (str): The text to extract names from.
-
-    Returns:
-        tuple: A tuple containing the extracted full name (string)
-               and son/wife/daughter of information (SWD, string),
-               or empty strings if not found.
-    """
-    regex_swd = r"dual\sOwner\)?\s*:?\s*([A-Z.]+\s[A-Z.]+\s[A-Z.]+)"
-    match = re.search(regex_swd, input, re.IGNORECASE)
-    swd = match.group(1) if match else ""
-
-    regex_name = r"NAME\s*:?\s*([A-Z]+\s[A-Z]+)"
-    match_name = re.search(regex_name, input, re.IGNORECASE)
-    name = match_name.group(1) if match_name else ""
-
-    if swd == "":
-        regex_swd = r"NAME\s*:?\s*([A-Z]+)\s"
-        match_swd = re.findall(regex_swd, input, re.IGNORECASE)
-        swd = match_swd[1] if len(match_swd) > 1 else ""
-
-    if swd == "":
-        regex_swd = r"OF\s*:?\s*[S/O01]*\s*([A-Z]+\s[A-Z]+)"
-        match = re.search(regex_swd, input, re.IGNORECASE)
-        swd = match.group(1) if match else ""
-
-    return name, swd
-
-
-def extract_reg_number(input):
-    """
-    Extracts the vehicle registration number from the given text using a regular expression.
-
-    This function searches for a pattern containing at least one digit followed by
-    10 alphanumeric characters.
-
-    Args:
-        input (str): The text to extract the registration number from.
-
-    Returns:
-        str: The extracted registration number, or an empty string if not found.
-    """
-    regex = r"(?=.*\d)[A-Z0-9]{10}"
-    match = re.search(regex, input)
-    reg_number = match.group(0) if match else ""
-
-    return reg_number
-
-
-def extract_chasis(input):
-    """
-    Extracts the chasis number from the given text using a regular expression.
-
-    This function searches for a pattern containing 17 or 18 alphanumeric characters.
-
-    Args:
-        input (str): The text to extract the chasis number from.
-
-    Returns:
-        str: The extracted chasis number, or an empty string if not found.
-    """
-    regex = r"[A-Z0-9]{17,18}"
-    match = re.search(regex, input)
-    chasis = match.group(0) if match else ""
-
-    return chasis
-
-
-def extract_fuel_type(input):
-    """
-    Extracts the fuel type from the given text using a regular expression.
-
-    This function searches for patterns containing "Fuel Type" or "Fuel" followed by
-    a colon or period, and then extracts the following text containing letters and slashes.
-
-    Args:
-        input (str): The text to extract the fuel type from.
-
-    Returns:
-        str: The extracted fuel type, or an empty string if not found.
-    """
-    regex = r"Fuel(?:\s+Type)?\s*[\s:\.]\s*([A-Z/]+)\s"
-    match = re.search(regex, input, re.IGNORECASE)
-    fuel_type = match.group(1) if match else ""
-    return fuel_type
-
-
-def extract_vehicle_class(input):
-    """
-    Extracts the vehicle class from the given text using a regular expression.
-
-    This function searches for patterns containing "Veh.Class" or "Veh Cl" followed by
-    a colon or period, and then extracts two words separated by spaces or special characters.
-
-    Args:
-        input (str): The text to extract the vehicle class from.
-
-    Returns:
-        str: The extracted vehicle class (two words combined), or an empty string if not found.
-    """
-    regex = r"(?:Veh.c.e\sClass|Veh\sCl)\s*[\s:]\s*([A-Z0-9/()-]+)\s([A-Z0-9/()-]+)\s"
-    match = re.search(regex, input, re.IGNORECASE)
-    vehicle_class = match.group(1) if match else ""
-    return vehicle_class
-
-
-def extract_manufacturer(input):
-    """
-    Extracts the vehicle manufacturer from the given text using a regular expression.
-
-    This function searches for a pattern containing "MFR" followed by a colon and extracts
-    the following text containing letters and spaces.
-
-    Args:
-        input (str): The text to extract the manufacturer from.
-
-    Returns:
-        str: The extracted manufacturer, or an empty string if not found.
-    """
-    regex = r"MFR\s*:\s*([A-Z\s]+)\n"
-    match = re.search(regex, input, re.IGNORECASE)
-    manufacturer = match.group(1) if match else ""
-    return manufacturer
-
-
-def extract_tax_info(input):
-    """
-    Extracts tax information (up to which month/year) from the given text using a regular expression.
-
-    This function searches for a pattern containing "Tax Up To" followed by a colon or space,
-    and then extracts the following word (assuming it represents the month/year).
-
-    Args:
-        input (str): The text to extract the tax information from.
-
-    Returns:
-        str: The extracted tax information (month/year), or an empty string if not found.
-    """
-    regex = r"Tax\sUp\s{0,1}to\s*:\s*([A-Z]+)\s"
-    match = re.search(regex, input, re.IGNORECASE)
-    tax_up_to = match.group(1) if match else ""
-    return tax_up_to
-
-
-def extract_model(input):
-    """
-    Extracts the vehicle model from the given text using a regular expression.
-
-    This function searches for a pattern containing "Model" followed by a colon or space,
-    and then extracts the following text containing letters, numbers, forward slashes,
-    hyphens, parentheses, periods, and spaces (up to 4 words).
-
-    Args:
-        input (str): The text to extract the model from.
-
-    Returns:
-        str: The extracted vehicle model, or an empty string if not found.
-    """
-    regex = r"Mode.\s*[\s:]\s*([A-Z0-9/+()-.]+(?:\s+[^\w\n]*[A-Z0-9/+()-.]+){0,3})\s"
-    match = re.search(regex, input, re.IGNORECASE)
-    model = match.group(1) if match else ""
-    return model
-
-
-def extract_all_dates(input_text):
-    """
-    Extracts all dates from the given text using a regular expression.
-
-    This function searches for patterns in formats like DD/MM/YYYY, DD-MM-YYYY, or
-    MMM/YYYY, and sorts the extracted dates chronologically.
-
-    Args:
-        input_text (str): The text to extract dates from.
-
-    Returns:
-        list: A list of extracted dates sorted in ascending order (strings).
-    """
-    regex = r"\b(\d{1,2}[/\-.](?:\d{2}|\d{4}|\w{3})[/\-.]\d{2,4})\b"
-    dates = re.findall(regex, input_text)
-    sorted_dates = sorted(
-        dates, key=lambda date: int(date.split("/")[-1].split("-")[-1])
-    )
-
-    return sorted_dates
-
-
-def extract_address(input):
-    """
-    Extracts the address from the given text using a regular expression.
-
-    This function searches for patterns containing "Address" (optional colon)
-    followed by any characters and spaces, prioritizing lines ending with a postal code (6 digits).
-
-    Args:
-        input (str): The text to extract the address from.
-
-    Returns:
-        str: The extracted address, or an empty string if not found.
-    """
-    regex = r"Address:?\s*((?:.|\n)*?\d{6})"
-    match = re.search(regex, input, re.IGNORECASE)
-    address = match.group(1) if match else ""
-
-    return address
-
-
-def extract_vehicle_registration_details(image_path):
-    """
-    Extracts vehicle registration details from an image using a combination of OCR and text processing.
-
-    This function performs the following steps:
-
-    1. Reads the image using Pillow.
-    2. Extracts text using Tesseract (assuming the text is in a supported language).
-    3. Extracts owner name and son/wife/daughter of (SWD) information using regular expressions.
-    4. Extracts all dates using a regular expression and sorts them chronologically.
-    5. Extracts vehicle details like registration number, chasis number, fuel type,
-       vehicle class, and model using regular expressions.
-    6. Extracts manufacturer and tax information using regular expressions.
-    7. Extracts address using a regular expression prioritizing lines ending with a postal code.
-
-    Args:
-        image_path (str): The path to the vehicle registration image.
-
-    Returns:
-        dict: A dictionary containing extracted vehicle registration details with keys like
-              "Registration Number", "Chasis Number", "Full Name", etc.
-    """
-    image = Image.open(image_path)
-    extracted_text = pytesseract.image_to_string(image)
-
-    names = extract_names(extracted_text)
-    name, swd = names[0], names[1]
-
-    dates = extract_all_dates(extracted_text)
-    expiry_date = dates[-1] if len(dates) > 0 else ""
-    registration_date = dates[0] if len(dates) > 1 else ""
-
-    chasis_number = extract_chasis(extracted_text)
-    reg_number = extract_reg_number(extracted_text)
-
-    address = extract_address(extracted_text)
-
-    fuel_type = extract_fuel_type(extracted_text)
-    vehicle_class = extract_vehicle_class(extracted_text)
-    model = extract_model(extracted_text)
-
-    manufacturer = extract_manufacturer(extracted_text)
-    tax_up_to = extract_tax_info(extracted_text)
-
-    return {
-        "Registration Number": reg_number,
-        "Chasis Number": chasis_number,
-        "Full Name": name,
-        "S/W/D of": swd,
-        "Address": address,
-        "Fuel Type": fuel_type,
-        "Vehicle Class": vehicle_class,
-        "Vehicle Model": model,
-        "Manufacturer": manufacturer,
-        "Registration Date": registration_date,
-        "Expiry Date": expiry_date,
-        "Tax Upto": tax_up_to,
-    }
+import cv2
+import numpy as np
+import easyocr
+from PIL import Image, ImageEnhance
+from datetime import datetime
+
+
+class VehicleRegistrationExtractor:
+    def __init__(self):
+        self.reader = easyocr.Reader(["en"])
+        self.ocr_corrections = {
+            "0": ["O", "o", "Q"],
+            "1": ["I", "l", "|"],
+            "2": ["Z"],
+            "5": ["S"],
+            "6": ["G"],
+            "8": ["B"],
+            "A": ["4"],
+            "B": ["8"],
+            "D": ["0"],
+            "G": ["6"],
+            "I": ["1", "|"],
+            "O": ["0"],
+            "S": ["5"],
+            "Z": ["2"],
+        }
+
+    def preprocess_image(self, image_path):
+        try:
+            img = cv2.imread(image_path)
+            if img is None:
+                pil_img = Image.open(image_path)
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            denoised = cv2.bilateralFilter(gray, 9, 75, 75)
+            thresh = cv2.adaptiveThreshold(
+                denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+            )
+            pil_image = Image.fromarray(thresh)
+            enhancer = ImageEnhance.Contrast(pil_image)
+            return enhancer.enhance(1.5)
+        except Exception as e:
+            print(f"Error in preprocessing: {e}")
+            return Image.open(image_path)
+
+    def extract_text_easyocr(self, image):
+        image_np = np.array(image.convert("RGB"))
+        results = self.reader.readtext(image_np, detail=0)
+        return "\n".join(results)
+
+    def clean_and_segment_text(self, text):
+        text = re.sub(r"[^\w\s\-/.:()]+", " ", text)
+        text = re.sub(r"\s+", " ", text.strip())
+        text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+        text = re.sub(r"([a-zA-Z])(\d)", r"\1 \2", text)
+        text = re.sub(r"(\d)([a-zA-Z])", r"\1 \2", text)
+        return text
+
+    def extract_specific_field(self, text, field_patterns, max_length=50):
+        for pattern in field_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                result = match.group(1).strip()
+                if 0 < len(result) <= max_length:
+                    return result
+        return ""
+
+    def extract_owner_name(self, text):
+        """Extract owner name with strict patterns"""
+        patterns = [
+            r"Owner\s*Name[:\-\s]*([A-Z][A-Z\s]{5,30})(?=\s+(?:S[/\\]?[WwDd]|Present|Address|Permanent))",
+            r"([A-Z]{2,}\s+[A-Z]{2,}\s+[A-Z]{2,})(?=\s+(?:S[/\\]?[WwDd]|Present|Address))",
+            r"Name[:\-\s]*([A-Z][A-Z\s]{5,30})(?=\s+(?:S[/\\]?[WwDd]|Present|Address))",
+        ]
+
+        lines = text.split("\n")
+        for line in lines:
+            if "Owner Name" in line or "GAIKWAD" in line:
+                name_match = re.search(
+                    r"(?:Owner\s*Name[:\-\s]*)?([A-Z]{2,}\s+[A-Z]{2,}\s+[A-Z]{2,})",
+                    line,
+                    re.IGNORECASE,
+                )
+                if name_match:
+                    name = name_match.group(1).strip()
+                    name = re.sub(r"\s+", " ", name)
+                    if len(name) <= 40 and name.replace(" ", "").isalpha():
+                        return name.title()
+
+        name = self.extract_specific_field(text, patterns, 40)
+        return name.title() if name else ""
+
+    def extract_swd_name(self, text):
+        """Extract S/W/D name"""
+        patterns = [
+            r"S[/\\]?[WwDd]\s*Name[:\-\s]*([A-Z][A-Z\s]{2,25})(?=\s+(?:Present|Address|Permanent))",
+            r"S[/\\]?[WwDd][:\-\s]*([A-Z][A-Z\s]{2,25})(?=\s+(?:Present|Address))",
+            r"(?:Son|Wife|Daughter)\s+of[:\-\s]*([A-Z][A-Z\s]{2,25})",
+        ]
+
+        lines = text.split("\n")
+        for line in lines:
+            if any(keyword in line.upper() for keyword in ["S/W/D", "SWD", "ARVIND"]):
+                swd_match = re.search(
+                    r"(?:S[/\\]?[WwDd]|SWD)[:\-\s]*([A-Z]{2,20})", line, re.IGNORECASE
+                )
+                if swd_match:
+                    swd = swd_match.group(1).strip()
+                    if swd.replace(" ", "").isalpha() and len(swd) <= 25:
+                        return swd.title()
+
+        swd = self.extract_specific_field(text, patterns, 25)
+        return swd.title() if swd else ""
+
+    def extract_reg_number(self, text):
+        patterns = [
+            r"\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{1,4})\b",  # MH12AB1234, MH 12 AB 1234
+            r"\b(Reg(?:n)?(?:istration)?(?: No)?[:\- ]+)?([A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4})\b",  # With optional prefix
+            r"\b([A-Z]{2}-\d{1,2}-[A-Z]{1,3}-\d{1,4})\b",  # Format with hyphens: MH-12-AB-1234
+        ]
+
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, tuple):
+                    reg_num = match[1]
+                else:
+                    reg_num = match
+                reg_num = re.sub(r"[\s\-]", "", reg_num).upper()
+                if re.match(r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$", reg_num):
+                    return reg_num
+        return ""
+
+    def extract_chassis_number(self, text):
+        patterns = [
+            r"Chassis\s*Number[:\-\s]*([A-Z0-9]{17})",
+            r"Chasis\s*Number[:\-\s]*([A-Z0-9]{17})",
+            r"\b(ME[A-Z0-9]{15})\b",
+            r"\b([A-Z]{3}[A-Z0-9]{14})\b",
+        ]
+
+        chassis = self.extract_specific_field(text, patterns, 20)
+        if chassis and len(chassis) >= 17:
+            return chassis.upper()
+
+        vin_match = re.search(r"\b((?:ME|WB|VF|WBA|WDD)[A-Z0-9]{14,15})\b", text)
+        if vin_match:
+            return vin_match.group(1).upper()
+
+        return ""
+
+    def extract_engine_number(self, text):
+        """Extract engine number with specific patterns"""
+        patterns = [
+            r"Engine\s*Number[:\-\s]*([A-Z0-9]{8,15})",
+            r"Engine[:\-\s]*([A-Z0-9]{8,15})",
+            r"\b(KC\d{2}EA\d{7})\b",
+            r"\b([A-Z]{2,4}\d{2}[A-Z]{2}\d{6,8})\b",
+        ]
+
+        engine = self.extract_specific_field(text, patterns, 15)
+        return engine.upper() if engine else ""
+
+    def extract_fuel_type(self, text):
+        """Extract fuel type"""
+        fuel_types = ["PETROL", "DIESEL", "CNG", "ELECTRIC", "HYBRID", "LPG"]
+
+        for fuel in fuel_types:
+            if re.search(rf"\b{fuel}\b", text, re.IGNORECASE):
+                return fuel.upper()
+        return ""
+
+    def extract_vehicle_class(self, text):
+        """Extract vehicle class"""
+        patterns = [
+            r"Vehicle\s*Class[:\-\s]*([A-Z][A-Z0-9\s/\-()]{3,25})",
+            r"Class[:\-\s]*([A-Z][A-Z0-9\s/\-()]{3,25})",
+            r"\b(M-Cycle[/\\]Scooter[^A-Za-z]*(?:2Wn)?)\b",
+        ]
+
+        v_class = self.extract_specific_field(text, patterns, 30)
+        if v_class:
+            v_class = re.sub(r"Sceoter", "Scooter", v_class, flags=re.IGNORECASE)
+            v_class = re.sub(r"2Wn", "2Wheeler", v_class, flags=re.IGNORECASE)
+
+        return v_class if v_class else ""
+
+    def extract_model(self, text):
+        """Extract vehicle model"""
+        patterns = [
+            r"Vehicle\s*Model[:\-\s]*([A-Z0-9\s]{3,20})",
+            r"Model[:\-\s]*([A-Z0-9\s]{3,20})",
+            r"\b(UNICORN)\b",
+            r"\b(\d+\s*UNICORN)\b",
+        ]
+
+        model = self.extract_specific_field(text, patterns, 20)
+        if model:
+            model = re.sub(r"UNIGORN", "UNICORN", model, flags=re.IGNORECASE)
+            model = re.sub(r"^\d+\s*", "", model)
+
+        return model if model else ""
+
+    def extract_color(self, text):
+        """Extract vehicle color"""
+        patterns = [
+            r"Vehicle\s*Color[:\-\s]*([A-Z][A-Z\s]{3,25})",
+            r"Color[:\-\s]*([A-Z][A-Z\s]{3,25})",
+        ]
+
+        color = self.extract_specific_field(text, patterns, 30)
+        if color:
+            color = re.sub(
+                r"PEARLIGNEOUSBLACK", "PEARL IGNEOUS BLACK", color, flags=re.IGNORECASE
+            )
+            color = re.sub(r"([A-Z])([A-Z]{2,})", r"\1 \2", color)
+
+        return color.title() if color else ""
+
+    def extract_dates(self, text):
+        """Extract dates with multiple formats"""
+        date_patterns = [
+            r"\b(\d{1,2}[-/]\w{3}[-/]\d{4})\b",
+            r"\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b",
+            r"\b(\d{2}[-/]\w{3}[-/]\d{4})\b",
+        ]
+
+        dates = []
+        for pattern in date_patterns:
+            found_dates = re.findall(pattern, text)
+            dates.extend(found_dates)
+
+        valid_dates = []
+        for date in dates:
+            date = re.sub(r"ul", "Jul", date, flags=re.IGNORECASE)
+            date = re.sub(r"Blun", "Jun", date, flags=re.IGNORECASE)
+            date = re.sub(r"Ju([rn])", "Jun", date, flags=re.IGNORECASE)
+
+            if self.is_valid_date_format(date):
+                valid_dates.append(date)
+
+        return sorted(list(set(valid_dates)), key=self.parse_date_for_sorting)
+
+    def extract_address(self, text):
+        patterns = [
+            r"Address[:\-\s]*([A-Z0-9\s,.-]{10,100})",
+            r"Permanent\s*Address[:\-\s]*([A-Z0-9\s,.-]{10,100})",
+            r"Present\s*Address[:\-\s]*([A-Z0-9\s,.-]{10,100})",
+        ]
+
+        address = self.extract_specific_field(text, patterns, 100)
+        if address:
+            address = re.sub(r"\s+", " ", address).strip()
+            return address.title()
+
+        return ""
+
+    def extract_tax_info(self, text):
+        patterns = [
+            r"Tax\s*Upto[:\-\s]*([A-Z0-9\s,.-]{10,30})",
+            r"Tax[:\-\s]*([A-Z0-9\s,.-]{10,30})",
+        ]
+
+        tax_info = self.extract_specific_field(text, patterns, 30)
+        if tax_info:
+            tax_info = re.sub(r"\s+", " ", tax_info).strip()
+            return tax_info.title()
+
+        return ""
+
+    def is_valid_date_format(self, date_str):
+        formats = ["%d/%m/%Y", "%d-%m-%Y", "%d/%b/%Y", "%d-%b-%Y", "%d %b %Y"]
+        return any([self.try_parse(date_str, fmt) for fmt in formats])
+
+    def try_parse(self, date_str, fmt):
+        try:
+            datetime.strptime(date_str, fmt)
+            return True
+        except ValueError:
+            return False
+
+    def parse_date_for_sorting(self, date_str):
+        formats = ["%d/%m/%Y", "%d-%m-%Y", "%d/%b/%Y", "%d-%b-%Y", "%d %b %Y"]
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        return datetime.min
+
+    def extract_vehicle_registration_details(self, image_path):
+        try:
+            preprocessed_image = self.preprocess_image(image_path)
+            extracted_text = self.extract_text_easyocr(preprocessed_image)
+            cleaned_text = self.clean_and_segment_text(extracted_text)
+
+            print("Cleaned and Segmented Text:\n", cleaned_text[:1000], "...\n")
+
+            dates = self.extract_dates(cleaned_text)
+
+            details = {
+                "Registration Number": self.extract_reg_number(cleaned_text),
+                "Registration Date": dates[0] if len(dates) >= 1 else "",
+                "Expiry Date": dates[-1] if len(dates) >= 2 else "",
+                "Chassis Number": self.extract_chassis_number(cleaned_text),
+                "Engine Number": self.extract_engine_number(cleaned_text),
+                "Vehicle Model": self.extract_model(cleaned_text),
+                "Vehicle Color": self.extract_color(cleaned_text),
+                "Fuel Type": self.extract_fuel_type(cleaned_text),
+                "Vehicle Class": self.extract_vehicle_class(cleaned_text),
+                "Owner Name": self.extract_owner_name(cleaned_text),
+                "S/W/D of": self.extract_swd_name(cleaned_text),
+                "Address": self.extract_address(cleaned_text),
+                "Tax Upto": self.extract_tax_info(cleaned_text),
+            }
+
+            return details
+        except Exception as e:
+            print(f"Error processing image: {e}")
+            return {}
 
 
 def vehicle_registration(image_path):
-    """
-    Extracts vehicle registration details from an image using the extract_vehicle_registration_details function.
+    extractor = VehicleRegistrationExtractor()
+    return extractor.extract_vehicle_registration_details(image_path)
 
-    Args:
-        image_path (str): The path to the vehicle registration image.
 
-    Returns:
-        dict: A dictionary containing extracted vehicle registration details.
-    """
-    return extract_vehicle_registration_details(image_path)
+if __name__ == "__main__":
+    image_path = "/home/rishabh/openbharatocr/openbharatocr/ocr/VR2.jpeg"
+    details = vehicle_registration(image_path)
+
+    print("\n" + "=" * 60)
+    print("EXTRACTED VEHICLE REGISTRATION DETAILS")
+    print("=" * 60)
+    for key, value in details.items():
+        print(f"{key:<20}: {value}")

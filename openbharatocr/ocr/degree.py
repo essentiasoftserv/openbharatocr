@@ -1,14 +1,49 @@
 import cv2
 import pytesseract
 import re
+import numpy as np
 from pytesseract import Output
+from PIL import Image
 
 
-def extract_name(input):
+def preprocess_image(image_path):
+    """
+    Preprocesses the image to enhance text for OCR.
+
+    Args:
+        image_path (str): The path to the image.
+
+    Returns:
+        numpy.ndarray: The preprocessed image.
+    """
+    # Read the image
+    image = cv2.imread(image_path)
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply Gaussian blur to smooth the image
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Apply adaptive thresholding to create a binary image
+    binary = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2
+    )
+
+    # Invert colors for better OCR performance
+    inverted_image = cv2.bitwise_not(binary)
+
+    return inverted_image
+
+
+import re
+
+
+def extract_name(text):
     """
     Extracts the recipient's name from the given text.
 
-    This function uses a regular expression to search for patterns commonly found in degree certificates that indicate the recipient's name. These patterns include phrases like "conferred upon [Name]" or "awarded to [Name]".
+    This function uses a regular expression to search for patterns commonly found in degree certificates that indicate the recipient's name.
 
     Args:
     text: The text extracted from the degree certificate image.
@@ -16,13 +51,32 @@ def extract_name(input):
     Returns:
     The extracted recipient's name as a string, or None if no name is found.
     """
-    regex = re.compile(
-        r"(?: conferred on|confereed por|confers upon|conferred upon|coyfr spon|conferred wpa|Certify that|Certifies that|testify that|known that|admits|granted|awarded to)\s+([A-Z][a-zA-Z' -]+([A-Z][a-zA-Z' -]))|awarded to\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:\s[A-Z][a-z]))",
-        re.IGNORECASE,
+    patterns = [
+        r"conferred on",
+        r"conferred upon",
+        r"awarded to",
+        r"certify that",
+        r"certifies that",
+        r"testify that",
+        r"known that",
+        r"admits",
+        r"granted",
+    ]
+
+    # Create a regex pattern by joining all patterns with an optional whitespace and capturing the name
+    name_pattern = r"(?:{})\s+([A-Z][a-zA-Z' -]+(?:\s[A-Z][a-zA-Z' -]+)*)".format(
+        "|".join(patterns)
     )
-    match = re.search(regex, input)
+
+    # Compile the regex with case insensitivity
+    regex = re.compile(name_pattern, re.IGNORECASE)
+
+    # Search for the pattern in the input text
+    match = regex.search(text)
+
     if match:
         return match.group(1).strip()
+
     return None
 
 
@@ -95,17 +149,28 @@ def check_image_quality(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     variance_of_laplacian = cv2.Laplacian(image, cv2.CV_64F).var()
-    sharpness_threshold = 150.0
 
     mean_brightness = image.mean()
-    brightness_threshold = 150.0
 
-    if (
-        variance_of_laplacian < sharpness_threshold
-        or mean_brightness < brightness_threshold
-    ):
-        return False
-    return True
+    return variance_of_laplacian > 50 and mean_brightness > 50
+
+
+def preprocess_image(image_path):
+    gray = cv2.cvtColor(image_path, cv2.COLOR_BGR2GRAY)
+
+    gray = cv2.equalizeHist(gray)
+
+    kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+
+    processed = cv2.dilate(gray, kernal, iterations=1)
+
+    processed = cv2.erode(processed, kernal, iterations=1)
+
+    sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+
+    sharpened = cv2.filter2D(processed, -1, sharpen_kernel)
+
+    return sharpened
 
 
 def parse_degree_certificate(image_path):
@@ -130,7 +195,7 @@ def parse_degree_certificate(image_path):
 
     image = cv2.imread(image_path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+    preprocessed_image = preprocess_image(image_path)
     extracted_text = pytesseract.image_to_string(gray_image, output_type=Output.STRING)
 
     degree_info = {
@@ -156,3 +221,6 @@ def degree(image_path):
         dict: A dictionary containing the extracted information from the degree certificate (same as the output of `parse_degree_certificate`).
     """
     return parse_degree_certificate(image_path)
+
+
+parse_degree_certificate("path/to/degree_certificate.jpeg")

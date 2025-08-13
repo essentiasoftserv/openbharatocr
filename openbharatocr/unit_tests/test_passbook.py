@@ -3,15 +3,11 @@ from unittest import mock, TestCase
 from openbharatocr.ocr.passbook import (
     extract_name,
     extract_open_date,
-    extract_bank_name,
     extract_phone,
     extract_branch_name,
-    extract_nomination_name,
-    extract_email,
     extract_account_no,
     extract_cif_no,
     extract_address,
-    parse_passbook_frontpage,
 )
 
 

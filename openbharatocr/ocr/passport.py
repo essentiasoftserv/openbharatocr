@@ -63,59 +63,40 @@ def extract_names(input):
     return name, surname
 
 
+import datetime
+
+
 def extract_all_dates(input):
-    """
-    Extracts all dates in DD/MM/YYYY or DD-MM-YYYY format from the given text using a regular expression.
-
-    This function sorts the extracted dates chronologically and removes duplicates.
-
-    Args:
-        input (str): The text to extract dates from.
-
-    Returns:
-        list: A list of extracted dates in sorted order (strings).
-    """
     regex = r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b"
-    dates = re.findall(regex, input)
-    dates = sorted(dates, key=lambda x: int(re.split(r"[-/]", x)[-1]))
+    matches = re.findall(regex, input)
 
-    seen = set()
-    unique_dates = []
+    unique_dates = set()
+    for match in matches:
+        try:
+            if match[2] == "/":
+                date_obj = datetime.strptime(match, "%d/%m/%Y")
+            else:
+                date_obj = datetime.strptime(match, "%d-%m-%Y")
+            unique_dates.add(date_obj)
+        except ValueError:
+            continue
 
-    for date in dates:
-        if date not in seen:
-            seen.add(date)
-            unique_dates.append(date)
-
-    return unique_dates
+    sorted_dates = sorted(unique_dates)
+    return [date.strftime("%d-%m-%Y") for date in sorted_dates]
 
 
 def extract_all_places(input):
-    """
-    Extracts place names from the text following the last identified date in the document,
-    assuming a newline separates dates and places.
-
-    This function filters out anything except letters, punctuation, spaces, and apostrophes,
-    and removes single-character entries.
-
-    Args:
-        input (str): The text to extract places from.
-
-    Returns:
-        list: A list of extracted place names (strings).
-    """
-    dates = re.findall(r"\b(\d{2}[/\-.]\d{2}[/\-.](?:\d{4}|\d{2}))\b", input)
-    last_date = dates[-1] if dates else None
-
-    all_places = []
-
-    if last_date:
-        places = input.split("\n")
-        for place in places:
-            if re.match(r'^[A-Z,. -\'"]+$', place) and place.strip():
-                all_places.append(place)
-
-    return all_places
+    # Split input by lines
+    lines = input.splitlines()
+    places = []
+    for line in lines:
+        if (
+            re.match(r'^[A-Z,. -\'"]+$', line)
+            and line.strip()
+            and line.strip().count(" ") > 0
+        ):
+            places.append(line.strip())
+    return places
 
 
 def extract_passport_number(input):

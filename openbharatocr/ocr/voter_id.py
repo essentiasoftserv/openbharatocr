@@ -81,13 +81,30 @@ def extract_voter_id(text):
 
 
 def extract_names(text):
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    name_lines = [line for line in lines if "name" in line.lower()]
-    names = []
-    for line in name_lines:
-        parts = re.split(r"[:=]", line)
-        if len(parts) > 1:
-            names.append(parts[1].strip())
+    candidates = re.findall(r"\b[A-Z][a-z]+\b", text)
+
+    # Common non-name words to ignore
+    blacklist = {
+        "The",
+        "And",
+        "For",
+        "In",
+        "On",
+        "At",
+        "Of",
+        "By",
+        "With",
+        "A",
+        "An",
+        "This",
+        "That",
+        "These",
+        "Those",
+    }
+
+    # Filter out non-names
+    names = [word for word in candidates if word not in blacklist]
+
     return names
 
 
@@ -114,7 +131,7 @@ def extract_date(text):
 
 def extract_address(text):
     match = re.search(
-        r"Address\s*[:\-]?\s*([A-Za-z0-9,\n\-\/\s]+[0-9]{6})", text, re.IGNORECASE
+        r"(?:Address\s*[:\-]?\s*)?([A-Za-z0-9,.\-\/\s\n]+?\d{6})", text, re.IGNORECASE
     )
     return match.group(1).strip() if match else ""
 

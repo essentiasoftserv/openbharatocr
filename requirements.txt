@@ -8,6 +8,8 @@ numpy==1.26.4
 
 fuzzywuzzy
 paddlepaddle==3.0.0
+paddleocr
+pytest
 # pyannote.audio==3.0.0
 # transformers==4.36.0
 # boto3==1.26.106

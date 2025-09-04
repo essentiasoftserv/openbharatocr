@@ -1,11 +1,10 @@
 import pytest
-from unittest import mock, TestCase
 from openbharatocr.ocr.degree import (
     extract_name,
-    extract_institution_name,
     extract_degree_name,
+    extract_institution_name,
     extract_year_of_passing,
-    parse_degree_certificate,
+    # parse_degree_certificate,   # Uncomment if testing with real images
 )
 
 
@@ -47,7 +46,7 @@ def test_extract_degree_name(input_text, expected_output):
     [
         ("Amity University", "Amity University"),
         ("Amity University", "Amity University"),
-        ("Sharda University.", "Sharda University"),
+        ("Sharda University.", "Sharda University"),  # strip trailing dot
     ],
 )
 def test_extract_institution_name(input_text, expected_output):
@@ -69,6 +68,7 @@ def test_extract_year_of_passing(input_text, expected_output):
     assert extract_year_of_passing(input_text) == expected_output
 
 
+# Uncomment this when you have dummy images ready
 # @pytest.mark.parametrize(
 #     "image_path, expected_output",
 #     [

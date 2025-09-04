@@ -112,7 +112,9 @@ def clean_text(input_text):
 
 def extract_cif_no(input_text):
     match = re.search(
-        r"CIF(?:\s*No\.?|No| Number |#)[:\s]*([\d\-]+)", input_text, re.IGNORECASE
+        r"CIF(?:\s*(?:No\.?|Number|#))?[:\s]*([\d\-]+)",
+        input_text,
+        re.IGNORECASE,
     )
     return match.group(1).replace("-", "").strip() if match else None
 
@@ -121,12 +123,19 @@ def extract_name(input_text):
     # This regex looks for the word "Name" followed by a colon or spaces and captures subsequent characters
     # excluding titles and unnecessary prefixes. It assumes the name follows "Name:" and is a sequence of words
     # with possible additional descriptors like "S/D/W/H/o:"
+    if not input_text or not isinstance(input_text, str):
+        return None
+
     match = re.search(
         r"Name[:\s]*((?:Mr\.?|S\/D\/W\/H\/o:?\s*)?([A-Za-z\s]+))",
         input_text,
         re.IGNORECASE,
     )
-    return match.group(2).strip() if match else None
+
+    if match:
+        name = match.group(2).strip()
+        return name if name else None
+    return None
 
 
 def extract_account_no(input_text):
@@ -140,44 +149,51 @@ def extract_address(cleaned_text):
     # Normalize text for consistent processing
     cleaned_text = cleaned_text.replace("\n", " ").strip()
 
-    # Start by locating the address section
-    match = re.search(r"Address[:\s]*([\w\s,./\-]*)", cleaned_text, re.IGNORECASE)
-
+    # Case 1: Explicit "Address" present
+    match = re.search(r"\bAddress[:\s]+(.+)", cleaned_text, re.IGNORECASE)
     if match:
-        # Extract raw address-like section
-        raw_address = match.group(1)
+        raw_address = match.group(1).strip()
+        # If raw_address is too short or just generic words like "info", ignore it
+        if not raw_address or raw_address.lower() in {"info", "na", "n/a"}:
+            return None
+    else:
+        # Case 2: If text looks like an address (contains street-like patterns)
+        if re.search(
+            r"\d+.*(Street|St|Road|Rd|Market|Nagar|Delhi|Haryana|UP|Bihar)",
+            cleaned_text,
+            re.IGNORECASE,
+        ):
+            raw_address = cleaned_text
+        else:
+            return None
 
-        # Split into parts for line-by-line processing
-        lines = re.split(r"[\n:.]", raw_address)
+    # Split and filter out interruptions
+    lines = re.split(r"[.:]", raw_address)
 
-        # Keywords to identify interruptions
-        interruptions = {
-            "phone",
-            "email",
-            "branch",
-            "code",
-            "cif",
-            "date",
-            "nom",
-            "account",
-            "mop",
-            "type",
-            "name",
-        }
+    interruptions = {
+        "phone",
+        "email",
+        "branch",
+        "code",
+        "cif",
+        "date",
+        "nom",
+        "account",
+        "mop",
+        "type",
+        "name",
+    }
 
-        # Clean lines by skipping interrupted parts
-        valid_address_parts = []
-        for line in lines:
-            line_lower = line.lower().strip()
-            # Skip lines that start with interruption keywords
-            if not any(line_lower.startswith(keyword) for keyword in interruptions):
-                valid_address_parts.append(line.strip())
+    valid_address_parts = []
+    for line in lines:
+        line_lower = line.lower().strip()
+        if line_lower and not any(
+            line_lower.startswith(keyword) for keyword in interruptions
+        ):
+            valid_address_parts.append(line.strip())
 
-        # Join cleaned address parts
-        return " ".join(valid_address_parts)
-
-    # If no match found
-    return None
+    final_address = " ".join(valid_address_parts).strip()
+    return final_address if final_address else None
 
 
 def extract_phone(input_text):
@@ -186,20 +202,36 @@ def extract_phone(input_text):
 
 
 def extract_branch_name(input_text):
-    match = re.search(r"Branch[:\s]+([A-Za-z\s]+)", input_text, re.IGNORECASE)
-    return match.group(1).strip() if match else None
+    match = re.search(r"\bBranch[:\s]+([A-Za-z\s]+)", input_text, re.IGNORECASE)
+    if not match:
+        return None
+    branch_name = match.group(1).strip()
+    # Extra guard: ignore meaningless words like "info"
+    if branch_name.lower() in ["info", "information", "none", "na"]:
+        return None
+    return branch_name
 
 
 def extract_generic_bank_name(input_text):
-    # Check explicitly for "SBI", "sbi", or "STATE BANK"
-    if re.search(r"\b(SBI|sbi|STATE BANK)\b", input_text, re.IGNORECASE):
-        return "STATE BANK OF INDIA"
+    bank_map = {
+        "HDFC Bank": [r"\bHDFC\b", r"\bHDFC Bank\b"],
+        "Union Bank of India": [r"\bUnion Bank\b", r"\bUnion Bank of India\b"],
+        "State Bank of India": [
+            r"\bSBI\b",
+            r"\bSTATE BANK\b",
+            r"\bState Bank of India\b",
+        ],
+    }
 
-    # Generic regex for other bank names
-    match = re.search(
-        r"\b([A-Za-z\s]+Bank(?:\s*Ltd|\s*Co)?)\b", input_text, re.IGNORECASE
-    )
-    return match.group(1).strip() if match else None
+    # Normalize input
+    text = input_text.strip()
+
+    for official_name, patterns in bank_map.items():
+        for pattern in patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return official_name
+
+    return None
 
 
 def extract_open_date(text):

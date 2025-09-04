@@ -160,11 +160,11 @@ def preprocess_image(image_path):
 
     gray = cv2.equalizeHist(gray)
 
-    kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
 
-    processed = cv2.dilate(gray, kernal, iterations=1)
+    processed = cv2.dilate(gray, kernel, iterations=1)
 
-    processed = cv2.erode(processed, kernal, iterations=1)
+    processed = cv2.erode(processed, kernel, iterations=1)
 
     sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
 
@@ -223,4 +223,5 @@ def degree(image_path):
     return parse_degree_certificate(image_path)
 
 
-parse_degree_certificate("path/to/degree_certificate.jpeg")
+if __name__ == "__main__":
+    parse_degree_certificate("path/to/degree_certificate.jpeg")

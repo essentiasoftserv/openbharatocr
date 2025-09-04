@@ -1,15 +1,21 @@
-#Python (3+)
-# tensorflow==2.15.0
-
+# Core OCR libraries
 pytesseract==0.3.10
-opencv-python==4.6.0.66
-easyocr==1.7.1
-numpy==1.26.4
-
-fuzzywuzzy
 paddlepaddle==3.0.0
+easyocr==1.7.1
+
+opencv-python==4.6.0.66
+numpy==1.26.4
+Pillow>=9.0.0
+
+fuzzywuzzy==0.18.0
+python-Levenshtein==0.12.2  # For faster fuzzywuzzy operations
+
 paddleocr
+
 pytest
+
+# Optional dependencies (uncomment if needed)
+# tensorflow==2.15.0
 # pyannote.audio==3.0.0
 # transformers==4.36.0
 # boto3==1.26.106

@@ -1,10 +1,4 @@
-from openbharatocr.ocr.voter_id import (
-    extract_voter_id,
-    extract_names,
-    extract_gender,
-    extract_date,
-    extract_address,
-)
+from openbharatocr.ocr.voter_id import *
 import pytest
 from unittest import mock, TestCase
 

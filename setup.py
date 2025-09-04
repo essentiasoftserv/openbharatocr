@@ -14,7 +14,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fp:
 
 setuptools.setup(
     name="openbharatocr",
-    version="0.4.2",
+    version="0.5.0",
     description="OpenBharatOCR is an open-source Python library for OCR of Indian government documents",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -25,7 +25,10 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=install_requires,
     packages=setuptools.find_packages(),
-    include_package_data=True,
+    include_package_data=False,  # Don't automatically include LICENSE
+    package_data={
+        "openbharatocr": ["*.py"],
+    },
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",

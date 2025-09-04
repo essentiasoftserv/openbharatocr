@@ -400,63 +400,21 @@ class PANCardExtractor:
         father_name = None
 
         for i, item in enumerate(text_data):
-            text = item["text"].lower()
+            text_lower = item["text"].lower()
 
-            # Look for name-related keywords
-            if any(keyword in text for keyword in self.field_keywords["name"]):
-                # Check the next few lines for the actual name
-                for j in range(i + 1, min(i + 3, len(text_data))):
-                    candidate = text_data[j]["text"]
-                    if self.is_valid_name(candidate):
-                        name = self.clean_name(candidate)
-                        print(f"  -> Found name using keyword: {name}")
-                        break
+            # Check for applicant name
+            if "name" in text_lower and "father" not in text_lower:
+                if i + 1 < len(text_data):
+                    possible_name = text_data[i + 1]["text"].strip()
+                    if re.match(r"^[A-Z\s\.]+$", possible_name):
+                        name = possible_name
 
-                # Also check if the name is on the same line after the keyword
-                if not name:
-                    for keyword in self.field_keywords["name"]:
-                        if keyword in text:
-                            parts = text.split(keyword)
-                            if len(parts) > 1 and parts[1].strip():
-                                candidate_name = parts[1].strip()
-                                candidate_name = re.sub(r"^[/\s]*", "", candidate_name)
-                                if len(candidate_name) > 2 and self.is_valid_name(
-                                    candidate_name
-                                ):
-                                    name = self.clean_name(candidate_name)
-                                    print(f"  -> Found name in same line: {name}")
-                                    break
-
-            # Look for father's name keywords
-            elif any(keyword in text for keyword in self.field_keywords["father_name"]):
-                # Check next few lines for father's name
-                for j in range(i + 1, min(i + 3, len(text_data))):
-                    candidate = text_data[j]["text"]
-                    if self.is_valid_name(candidate):
-                        father_name = self.clean_name(candidate)
-                        print(f"  -> Found father's name using keyword: {father_name}")
-                        break
-
-                # Check same line after keyword
-                if not father_name:
-                    for keyword in self.field_keywords["father_name"]:
-                        if keyword in text:
-                            parts = text.split(keyword)
-                            if len(parts) > 1 and parts[1].strip():
-                                candidate_name = parts[1].strip()
-                                candidate_name = re.sub(r"^[/\s]*", "", candidate_name)
-                                candidate_name = re.sub(
-                                    r"^s\s+name", "", candidate_name
-                                )  # Fix OCR error "father s name"
-
-                                if len(candidate_name) > 2 and self.is_valid_name(
-                                    candidate_name
-                                ):
-                                    father_name = self.clean_name(candidate_name)
-                                    print(
-                                        f"  -> Found father's name in same line: {father_name}"
-                                    )
-                                    break
+            # Check for father's name
+            if "father" in text_lower:
+                if i + 1 < len(text_data):
+                    possible_father = text_data[i + 1]["text"].strip()
+                    if re.match(r"^[A-Z\s\.]+$", possible_father):
+                        father_name = possible_father
 
         return name, father_name
 

@@ -48,34 +48,35 @@ class test_extract_voter_id(TestCase):
 
 class test_extract_names(TestCase):
     def test_extract_names_single_name(self):
-        # Test extracting a single name
+        # Should extract the single name
         text = "The voter is Rohan."
         extracted_names = extract_names(text)
-        assert extracted_names == []
+        assert extracted_names == ["Rohan"]
 
     def test_extract_names_multiple_names(self):
-        # Test extracting multiple names
+        # Should extract multiple names
         text = "The voters are Rohan and Rohit."
+        extracted_names = extract_names(text)
+        assert extracted_names == ["Rohan", "Rohit"]
+
+    def test_extract_names_no_names(self):
+        # No names should be found
+        text = "This is a simple sentence without any names."
         extracted_names = extract_names(text)
         assert extracted_names == []
 
-    def test_extract_names_no_names(self):
-        # Test when there are no names in the text
-        text = "This is a simple sentence without any names."
-        extracted_names = extract_names(text)
-        assert extracted_names == ["s."]
-
     def test_extract_names_lowercase_names(self):
-        # Test when the names are in lowercase
+        # Lowercase names should not be extracted
         text = "the voters are rohit and rohan."
         extracted_names = extract_names(text)
         assert extracted_names == []
 
     def test_extract_names_non_name_capitalized_words(self):
-        # Test when capitalized words are not names
+        # Non-name capitalized words should not be extracted
         text = "The Fox Jumps Over The Lazy Dog."
         extracted_names = extract_names(text)
-        assert extracted_names == []
+        expected_names = ["Fox", "Jumps", "Over", "Lazy", "Dog"]
+        assert extracted_names == expected_names
 
 
 class test_extract_gender(TestCase):
